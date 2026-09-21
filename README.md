@@ -37,7 +37,7 @@ The final 60-day window is reported as an additional recent-period evaluation. I
 
 With a fixed 730-day rolling window, Holt-Winters gives **6.15%** mean WAPE.
 
-### Final 60-day checks
+### Recent 60-day checks
 
 - SARIMAX: **11.59% WAPE**
 - LightGBM: **7.72% WAPE**
@@ -87,7 +87,6 @@ python -m jupyter notebook Ziyad_Riyadh_Grocery_Forecasting_Capstone.ipynb
 
 Run the notebook cells from top to bottom.
 
-Minor last-decimal differences can appear in optimized Holt-Winters results across Python/SciPy/statsmodels environments. The saved notebook outputs were produced in Python 3.11; these small numerical differences do not change the model ranking or conclusions.
 
 ## Repository contents
 

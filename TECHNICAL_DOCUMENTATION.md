@@ -63,7 +63,7 @@ Features include lags 1, 7, 14, and 28, shifted rolling statistics, and calendar
 
 All lag and rolling features use past values only. Multi-step prediction is recursive.
 
-Final 60-day result:
+Recent 60-day result:
 
 - MAE: **45.59**
 - RMSE: **53.87**
@@ -93,7 +93,7 @@ The project reports MAE, RMSE, WAPE, MASE, pinball loss, coverage, and interval 
 
 ## 8. Prediction intervals
 
-Final 60-day interval results:
+Recent 60-day interval results:
 
 - Prophet: WAPE **5.1%**, coverage **100%**, width **341.2**
 - Quantile LightGBM: WAPE **7.04%**, coverage **78.3%**, width **227.10**
@@ -114,9 +114,9 @@ The final 60-day window is an additional recent-period evaluation rather than an
 
 Random seed: **20260912**.
 
-For split conformal, the LightGBM point model is kept fixed after the calibration window and the residual margin is applied to the final test forecast. The reported coverage is empirical; the usual exchangeability assumption is not guaranteed for time-series residuals. `statsmodels` is pinned to **0.15.0** to reduce version drift in the classical-model fits across fresh environments.
+For split conformal, the LightGBM point model is kept fixed after the calibration window and the residual margin is applied to the final test forecast. The reported coverage is empirical; the usual exchangeability assumption is not guaranteed for time-series residuals.
 
-The repository includes the dataset, shared metric/backtest utilities, and package requirements. The saved notebook outputs were produced with Python 3.11. Minor last-decimal differences can appear in optimized Holt-Winters results across Python/SciPy/statsmodels environments; these do not change the ranking or conclusions.
+The repository includes the dataset, shared metric/backtest utilities, and package requirements. The saved notebook outputs were produced with Python 3.11.
 
 The dataset is synthetic. Promotions and holiday effects are not supplied as future-known variables. Recursive forecasts can accumulate error, SARIMAX retains some longer-lag residual structure, and interval calibration may change under a different demand regime.
 
