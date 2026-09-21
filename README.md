@@ -87,6 +87,8 @@ jupyter notebook Ziyad_Riyadh_Grocery_Forecasting_Capstone.ipynb
 
 Run the notebook cells from top to bottom.
 
+Minor last-decimal differences can appear in optimized Holt-Winters results across Python/SciPy/statsmodels environments. The saved notebook outputs were produced in Python 3.11; these small numerical differences do not change the model ranking or conclusions.
+
 ## Repository contents
 
 ```text
