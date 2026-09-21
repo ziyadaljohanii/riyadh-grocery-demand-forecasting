@@ -51,7 +51,7 @@ Prophet and sktime are shown as recent-period checks; they are not part of the s
 - Prophet: **100% coverage**, mean width **341.2**
 - Quantile LightGBM: **78.3% coverage**, mean width **227.10**
 - sktime Theta: **100% coverage**, mean width **1005.9**
-- Split conformal: **78.3% coverage**, mean width **139.99**
+- Split conformal: **80.0% coverage**, mean width **139.99**
 
 The nominal interval level is 80%. Coverage is interpreted together with interval width.
 
@@ -81,7 +81,8 @@ Clone the repository, install the dependencies, and launch Jupyter:
 git clone https://github.com/ziyadaljohanii/riyadh-grocery-demand-forecasting.git
 cd riyadh-grocery-demand-forecasting
 python -m pip install -r requirements.txt
-jupyter notebook Ziyad_Riyadh_Grocery_Forecasting_Capstone.ipynb
+python -m pip install jupyter
+python -m jupyter notebook Ziyad_Riyadh_Grocery_Forecasting_Capstone.ipynb
 ```
 
 Run the notebook cells from top to bottom.

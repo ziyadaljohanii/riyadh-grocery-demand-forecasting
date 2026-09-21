@@ -19,7 +19,7 @@ The raw ADF p-value is **0.0022504**. After first differencing it is **4.58357e-
 
 ## 3. SARIMAX selection
 
-The candidate grid compares short non-seasonal AR/MA orders with weekly seasonal terms. Non-converged fits are excluded before model selection.
+The candidate grid compares short non-seasonal AR/MA orders, both d = 0 and d = 1, and weekly seasonal terms. The small p/q range is guided by the short-lag ACF/PACF structure. Non-converged fits are excluded before model selection.
 
 The best converged candidate is:
 
@@ -98,7 +98,7 @@ Final 60-day interval results:
 - Prophet: WAPE **5.1%**, coverage **100%**, width **341.2**
 - Quantile LightGBM: WAPE **7.04%**, coverage **78.3%**, width **227.10**
 - sktime Theta: WAPE **12.2%**, coverage **100%**, width **1005.9**
-- Split conformal: WAPE **8.19%**, coverage **78.3%**, width **139.99**
+- Split conformal: WAPE **7.81%**, coverage **80.0%**, width **139.99**
 
 The nominal target is 80%. Coverage and width are considered together.
 
@@ -112,7 +112,9 @@ The final 60-day window is an additional recent-period evaluation rather than an
 
 ## 10. Reproducibility and limitations
 
-Random seed: **20260912**. `statsmodels` is pinned to **0.15.0** to reduce version drift in the classical-model fits across fresh environments.
+Random seed: **20260912**.
+
+For split conformal, the LightGBM point model is kept fixed after the calibration window and the residual margin is applied to the final test forecast. The reported coverage is empirical; the usual exchangeability assumption is not guaranteed for time-series residuals. `statsmodels` is pinned to **0.15.0** to reduce version drift in the classical-model fits across fresh environments.
 
 The repository includes the dataset, shared metric/backtest utilities, and package requirements. The saved notebook outputs were produced with Python 3.11. Minor last-decimal differences can appear in optimized Holt-Winters results across Python/SciPy/statsmodels environments; these do not change the ranking or conclusions.
 
