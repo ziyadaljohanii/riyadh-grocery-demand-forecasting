@@ -10,6 +10,8 @@
 
 The analysis uses the **Riyadh / Grocery** series from the course dataset. After sorting by date and enforcing daily frequency, the series contains **1,096 observations** from 2023-01-01 to 2025-12-31 with no missing days.
 
+This series was selected because it combines enough daily history for repeated time-based validation, a clear weekly seasonal structure for classical methods, and irregular spikes that make the comparison with machine-learning models useful.
+
 ## 2. Structure and stationarity
 
 STL is fitted with a 7-day period. The decomposition shows a rising trend, strong weekly seasonality, and several large residual spikes.
@@ -71,7 +73,7 @@ Final 60-day result:
 
 ## 6. Walk-forward backtesting
 
-The main point-model comparison uses five folds with a 14-day forecast horizon.
+The main point-model comparison uses five folds with a 14-day forecast horizon. The expanding window is the primary design because there is no documented single regime break that makes older history clearly obsolete. A fixed 730-day rolling window is included as a sensitivity check for the possibility that older observations are less useful.
 
 Expanding-window mean WAPE:
 
@@ -88,7 +90,7 @@ Models are refitted for every fold. Future test values are not used to construct
 
 ## 7. Metrics
 
-The project reports MAE, RMSE, WAPE, MASE, pinball loss, coverage, and interval width.
+The project reports MAE, RMSE, WAPE, MASE, pinball loss, coverage, and interval width. The selected series has no zero or near-zero demand values (minimum 397 units), so WAPE is stable for a percentage-style summary. MASE is also reported because it scales the forecast error against a weekly seasonal-naive benchmark.
 
 ## 8. Prediction intervals
 
@@ -103,11 +105,11 @@ The nominal target is 80%. Coverage and width are considered together.
 
 ## 9. Final interpretation
 
-Holt-Winters is the point-forecast benchmark for this series because it gives the best average error in the repeated expanding-window test and remains close in the rolling-window check.
+Holt-Winters is the point-forecast benchmark for this series because it gives the best average error in the repeated expanding-window test, remains close in the rolling-window sensitivity check, is straightforward to interpret, and is inexpensive to refit.
 
-LightGBM is retained as the flexible alternative because it can use additional predictors if they become available.
+The recommendation follows the course decision axes: **history length, interpretability, interval support, and compute cost**. The 1,096 daily observations provide enough history for weekly seasonal methods and lag-based machine-learning features. Prophet and sktime provide interval APIs, although their intervals are wider in this run. LightGBM is retained as the flexible alternative when promotions, prices, holidays, weather, or other future-known predictors become available.
 
-Prophet gives the strongest point result on the final 60-day holdout, but it was not evaluated in the same repeated five-fold point-model backtest.
+The final 60-day window is an additional recent-period evaluation rather than an independent model-selection holdout, because the walk-forward evaluation also reaches the end of the series.
 
 ## 10. Reproducibility and limitations
 
