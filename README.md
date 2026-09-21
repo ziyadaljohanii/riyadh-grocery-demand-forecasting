@@ -1,9 +1,8 @@
 # Riyadh Grocery Demand Forecasting
 
 **Student:** ZIYAD ABDULLAH ALJOHANI  
-**Program:** SDAIA Academy  
-**Course:** Time Series Forecasting for AI Systems  
-**Program dates:** 20–22 September 2026  
+**Programme:** Time Series Forecasting for AI Systems — SDAIA Academy  
+**Cohort dates:** 20–22 September 2026  
 **Submission date:** 21 September 2026
 
 This project forecasts daily grocery demand for the **Riyadh / Grocery** series in the synthetic dataset provided with the course. The series contains **1,096 daily observations** from 1 January 2023 to 31 December 2025.
@@ -60,7 +59,7 @@ The nominal interval level is 80%. Coverage is interpreted together with interva
 
 Holt-Winters is kept as the main point-forecast benchmark because it gives the lowest average WAPE across the repeated expanding folds, remains close under the rolling-window check, is easy to interpret, and is inexpensive to refit.
 
-The recommendation also considers the course decision axes: **history length, interpretability, interval support, and compute cost**. With 1,096 daily observations, the series has enough history for weekly seasonal methods and lag-based ML features. Prophet and sktime provide interval APIs but produce wider intervals in this run. LightGBM is the main alternative when useful external predictors become available.
+The recommendation also considers the course decision axes: **history length, interpretability, interval support, and compute budget**. With 1,096 daily observations, the series has enough history for weekly seasonal methods and lag-based ML features. Prophet and sktime provide interval APIs but produce wider intervals in this run. LightGBM is the main alternative when useful external predictors become available.
 
 The recent 60-day Prophet result is reported as an additional comparison, not as an independent model-selection verdict.
 

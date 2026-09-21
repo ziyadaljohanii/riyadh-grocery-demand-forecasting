@@ -1,9 +1,8 @@
 # Methodology and Results Notes
 
 **Student:** ZIYAD ABDULLAH ALJOHANI  
-**Program:** SDAIA Academy  
-**Course:** Time Series Forecasting for AI Systems  
-**Program dates:** 20–22 September 2026  
+**Programme:** Time Series Forecasting for AI Systems — SDAIA Academy  
+**Cohort dates:** 20–22 September 2026  
 **Submission date:** 21 September 2026
 
 ## 1. Series used
@@ -16,7 +15,7 @@ This series was selected because it combines enough daily history for repeated t
 
 STL is fitted with a 7-day period. The decomposition shows a rising trend, strong weekly seasonality, and several large residual spikes.
 
-The raw ADF p-value is **0.0022504**. After first differencing it is **4.58357e-17**. The raw test rejects a unit root, but the trend and autocorrelation pattern still support including first differencing among the SARIMAX candidates.
+The raw ADF p-value is **0.0022504**. After first differencing it is **4.58357e-17**. The raw test rejects a unit root, so differencing is not being claimed as an ADF requirement. I use **d=1** as a modeling choice because the trend/ACF indicate changing mean structure, and **D=1 with period 7** to account for the strong weekly seasonal cycle before comparing short AR/MA terms.
 
 ## 3. SARIMAX selection
 
@@ -107,7 +106,7 @@ The nominal target is 80%. Coverage and width are considered together.
 
 Holt-Winters is the point-forecast benchmark for this series because it gives the best average error in the repeated expanding-window test, remains close in the rolling-window sensitivity check, is straightforward to interpret, and is inexpensive to refit.
 
-The recommendation follows the course decision axes: **history length, interpretability, interval support, and compute cost**. The 1,096 daily observations provide enough history for weekly seasonal methods and lag-based machine-learning features. Prophet and sktime provide interval APIs, although their intervals are wider in this run. LightGBM is retained as the flexible alternative when promotions, prices, holidays, weather, or other future-known predictors become available.
+The recommendation follows the course decision axes: **history length, interpretability, interval support, and compute budget**. The 1,096 daily observations provide enough history for weekly seasonal methods and lag-based machine-learning features. Prophet and sktime provide interval APIs, although their intervals are wider in this run. LightGBM is retained as the flexible alternative when promotions, prices, holidays, weather, or other future-known predictors become available.
 
 The final 60-day window is an additional recent-period evaluation rather than an independent model-selection holdout, because the walk-forward evaluation also reaches the end of the series.
 
