@@ -113,7 +113,7 @@ The final 60-day window is an additional recent-period evaluation rather than an
 
 ## 10. Reproducibility and limitations
 
-Random seed: **20260912**. `statsmodels` is pinned to **0.15.0** so the classical-model optimization is reproducible across fresh environments.
+Random seed: **20260912**. `statsmodels` is pinned to **0.15.0** to reduce version drift in the classical-model fits across fresh environments.
 
 The repository includes the dataset, shared metric/backtest utilities, and package requirements. The saved notebook outputs were produced with Python 3.11. Minor last-decimal differences can appear in optimized Holt-Winters results across Python/SciPy/statsmodels environments; these do not change the ranking or conclusions.
 
