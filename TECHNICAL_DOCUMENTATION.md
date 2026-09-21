@@ -32,7 +32,7 @@ Selection statistics:
 - BIC: **12289.42**
 - Converged: **Yes**
 
-On the 60-day holdout:
+On the recent 60-day evaluation window:
 
 - MAE: **68.43**
 - RMSE: **83.57**
@@ -51,12 +51,12 @@ The weekly lag itself is not significant, but longer-lag residual dependence rem
 
 Holt-Winters uses additive trend and additive weekly seasonality. Seasonal naive repeats the previous week's observations.
 
-On the final 60-day holdout:
+On the recent 60-day evaluation window:
 
-- Holt-Winters WAPE: **17.11%**
+- Holt-Winters WAPE: **17.10%**
 - Seasonal naive WAPE: **13.23%**
 
-The holdout result alone is not used to choose the benchmark because it differs from the repeated walk-forward result.
+The recent-window result alone is not used to choose the benchmark because it differs from the repeated walk-forward result.
 
 ## 5. LightGBM
 

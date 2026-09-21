@@ -45,7 +45,7 @@ With a fixed 730-day rolling window, Holt-Winters gives **6.15%** mean WAPE.
 - Prophet: **5.1% WAPE**
 - sktime Theta: **12.2% WAPE**
 
-Prophet and sktime are shown as final-holdout checks; they are not part of the same five-fold point-model backtest.
+Prophet and sktime are shown as recent-period checks; they are not part of the same five-fold point-model backtest.
 
 ### Forecast intervals
 
