@@ -58,11 +58,28 @@ Holt-Winters is kept as the main point-forecast benchmark because it gives the l
 
 LightGBM is the main alternative when additional predictors are available. Prophet gives the lowest WAPE on the final 60-day holdout, but that result is not directly equivalent to the repeated point-model backtest.
 
-## Run
+## How to run
 
-Install the packages in `requirements.txt`, then open the notebook and run all cells from top to bottom. In Google Colab use:
+### Google Colab
 
-**Runtime → Run all**
+Open the notebook directly in Colab:
+
+https://colab.research.google.com/github/ziyadaljohanii/riyadh-grocery-demand-forecasting/blob/main/Ziyad_Riyadh_Grocery_Forecasting_Capstone.ipynb
+
+Then choose **Runtime → Run all**. The notebook checks for the optional forecasting libraries it needs and installs missing ones before the analysis starts.
+
+### Local Python
+
+Clone the repository, install the dependencies, and launch Jupyter:
+
+```bash
+git clone https://github.com/ziyadaljohanii/riyadh-grocery-demand-forecasting.git
+cd riyadh-grocery-demand-forecasting
+python -m pip install -r requirements.txt
+jupyter notebook Ziyad_Riyadh_Grocery_Forecasting_Capstone.ipynb
+```
+
+Run the notebook cells from top to bottom.
 
 ## Repository contents
 
