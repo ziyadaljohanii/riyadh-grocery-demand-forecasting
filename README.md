@@ -72,7 +72,7 @@ Open the notebook directly in Colab:
 
 https://colab.research.google.com/github/ziyadaljohanii/riyadh-grocery-demand-forecasting/blob/main/Ziyad_Riyadh_Grocery_Forecasting_Capstone.ipynb
 
-Then choose **Runtime → Run all**. The notebook checks for the optional forecasting libraries it needs and installs missing ones before the analysis starts.
+Then choose **Runtime → Run all**. The notebook installs or verifies the required forecasting packages before the analysis starts.
 
 ### Local Python
 
