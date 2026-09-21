@@ -58,7 +58,7 @@ Holt-Winters is kept as the main point-forecast benchmark because it gives the l
 
 LightGBM is the main alternative when additional predictors are available. Prophet gives the lowest WAPE on the final 60-day holdout, but that result is not directly equivalent to the repeated point-model backtest.
 
-## How to run
+## Run
 
 ### Google Colab
 
