@@ -12,15 +12,19 @@ The complete analysis is in:
 
 `Ziyad_Riyadh_Grocery_Forecasting_Capstone.ipynb`
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ziyadaljohanii/riyadh-grocery-demand-forecasting/blob/main/Ziyad_Riyadh_Grocery_Forecasting_Capstone.ipynb)
+
 ## Objective
 
 The goal is to compare several forecasting approaches under a time-aware evaluation rather than selecting a model from one random split. The analysis covers time-series structure and stationarity, classical forecasting with SARIMAX and Holt-Winters, LightGBM with lag/rolling/calendar features, walk-forward validation, point-forecast metrics, and prediction intervals.
 
 ## Data and evaluation
 
-The selected series is **Riyadh / Grocery** at daily frequency with no missing dates.
+The selected series is **Riyadh / Grocery** at daily frequency with no missing dates. I chose it because the three years of daily history support repeated walk-forward evaluation, the weekly seasonal pattern is clear enough for classical forecasting, and the irregular spikes make the comparison with machine-learning approaches meaningful.
 
-For point-model validation, the project uses five walk-forward folds with a 14-day horizon. A final 60-day holdout is kept as a separate check.
+For point-model validation, the project uses five walk-forward folds with a 14-day horizon. The expanding window is the main comparison because there is no documented regime break that makes older observations clearly obsolete; a 730-day rolling window is used as a sensitivity check.
+
+The final 60-day window is reported as an additional recent-period evaluation. It is not treated as an independent model-selection holdout because the walk-forward evaluation also reaches the end of the series.
 
 ## Main results
 
@@ -54,9 +58,11 @@ The nominal interval level is 80%. Coverage is interpreted together with interva
 
 ## Model choice
 
-Holt-Winters is kept as the main point-forecast benchmark because it gives the lowest average WAPE across the repeated expanding folds and remains close under the rolling-window check.
+Holt-Winters is kept as the main point-forecast benchmark because it gives the lowest average WAPE across the repeated expanding folds, remains close under the rolling-window check, is easy to interpret, and is inexpensive to refit.
 
-LightGBM is the main alternative when additional predictors are available. Prophet gives the lowest WAPE on the final 60-day holdout, but that result is not directly equivalent to the repeated point-model backtest.
+The recommendation also considers the course decision axes: **history length, interpretability, interval support, and compute cost**. With 1,096 daily observations, the series has enough history for weekly seasonal methods and lag-based ML features. Prophet and sktime provide interval APIs but produce wider intervals in this run. LightGBM is the main alternative when useful external predictors become available.
+
+The recent 60-day Prophet result is reported as an additional comparison, not as an independent model-selection verdict.
 
 ## Run
 
