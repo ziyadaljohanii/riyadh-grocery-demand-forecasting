@@ -312,7 +312,15 @@ async function fetchCommonsAudio(word){
         const blob=`${p.title} ${stripHtml(meta.ImageDescription?.value||"")} ${stripHtml(meta.Description?.value||"")} ${stripHtml(meta.Categories?.value||"")}`.toLowerCase();
         if(/synthetic|text-to-speech|\btts\b|speech synthes/.test(blob))continue;
         const norm=word.toLowerCase().replace(/[^a-z]/g,"");
-        if(!p.title.toLowerCase().replace(/[^a-z]/g,"").includes(norm))continue;
+        const rawTitle=p.title.replace(/^File:/i,"").replace(/\.(ogg|oga|wav|mp3|flac)$/i,"").toLowerCase();
+        const strippedTitle=rawTitle
+          .replace(/^en[- _]?(us|uk|gb|au|ca|nz|ie)[- _]?/,"")
+          .replace(/[- _]?\d+$/,"")
+          .replace(/[^a-z]/g,"");
+        const exactTitle=strippedTitle===norm;
+        const descriptionText=`${stripHtml(meta.ImageDescription?.value||"")} ${stripHtml(meta.Description?.value||"")}`.toLowerCase();
+        const exactDescription=new RegExp(`(^|[^a-z])${norm}([^a-z]|$)`,"i").test(descriptionText);
+        if(!exactTitle&&!exactDescription)continue;
         seen.add(playable);
         let accent="Accent not specified";
         if(/en[- _]?(us)|american|united states/.test(blob))accent="American";
@@ -353,9 +361,12 @@ function updateAccentTabCounts(container,items){
     UK:items.filter(x=>x.group==="UK").length,
     Other:items.filter(x=>x.group==="Other").length
   };
+  const ar=state.settings.lang==="ar";
   document.querySelectorAll(selector).forEach(btn=>{
     const key=btn.dataset.wordAccent||btn.dataset.accentFilter;
-    const base=key==="all"?"All":key==="US"?"American":key==="UK"?"British":"Other";
+    const base=ar
+      ?(key==="all"?"الكل":key==="US"?"أمريكي":key==="UK"?"بريطاني":"لهجات أخرى")
+      :(key==="all"?"All":key==="US"?"American":key==="UK"?"British":"Other");
     btn.textContent=`${base} ${counts[key]||0}`
   })
 }
@@ -363,10 +374,11 @@ function renderAudioItems(container,items,kind){
   const sorted=sortHumanAudio(items);
   container._audioItems=sorted;
   const context=container.id==="wordAudioList"?"word":"lesson";
+  const ar=state.settings.lang==="ar";
   const groups=[
-    {id:"US",title:"American English",sub:"US speakers"},
-    {id:"UK",title:"British English",sub:"UK speakers"},
-    {id:"Other",title:"Other English accents",sub:"Australia, Canada and more"}
+    {id:"US",title:ar?"الإنجليزية الأمريكية":"American English",sub:ar?"متحدثون أمريكيون":"US speakers"},
+    {id:"UK",title:ar?"الإنجليزية البريطانية":"British English",sub:ar?"متحدثون بريطانيون":"UK speakers"},
+    {id:"Other",title:ar?"لهجات إنجليزية أخرى":"Other English accents",sub:ar?"أستراليا، كندا وغيرها":"Australia, Canada and more"}
   ];
   let globalIndex=0;
   container.innerHTML=groups.map(group=>{
@@ -375,7 +387,10 @@ function renderAudioItems(container,items,kind){
     const cards=groupItems.map((a,localIndex)=>{
       const i=globalIndex++;
       const speaker=speakerDisplayName(a,localIndex);
-      const accent=accentFullLabel(a.accent,a.group);
+      const accentEn=accentFullLabel(a.accent,a.group);
+      const accent=ar
+        ?(a.group==="US"?"American English · أمريكي":a.group==="UK"?"British English · بريطاني":accentEn+" · لهجة أخرى")
+        :accentEn;
       return `
         <div class="audio-item" data-audio-group="${group.id}">
           <button class="audio-play" data-audio-url="${esc(a.url)}" aria-label="Play ${esc(speaker)}">▶</button>
