@@ -43,6 +43,7 @@ async function openLesson(id){
   readingStart=Date.now();clearInterval(readingTick);readingTick=setInterval(updateReadingTimer,1000);
   showLessonStep(0);
   setTimeout(()=>findHumanLessonAudio(true),180);
+  setTimeout(()=>warmVoiceLibrary((currentUnit.vocab||[]).map(v=>v[0])),1200);
 }
 function renderPassage(){
   const el=document.getElementById("passageText");
@@ -152,31 +153,17 @@ function speakerDisplayName(item,index=0){
   const direct=cleanSpeakerName(item.label||item.speaker||item.username||"");
   return direct||`Speaker ${index+1}`;
 }
-const CURATED_HUMAN_SPEAKERS=[
-  {match:"dvortygirl",group:"US",style:"street",role:"American Street",quality:"Conversational, curated"},
-  {match:"treemama",group:"US",style:"academic",role:"American Academic 1",quality:"Shtooka recording"},
-  {match:"droesperanto",group:"US",style:"academic",role:"American Academic 2",quality:"Shtooka recording"},
-  {match:"judith franck",group:"UK",style:"street",role:"British Street",quality:"Shtooka language-learning recording"},
-  {match:"yuumei",group:"UK",style:"academic",role:"British Academic 1",quality:"Curated pronunciation recording"},
-  {match:"atmarsden",group:"UK",style:"academic",role:"British Academic 2",quality:"Curated pronunciation recording"},
-  {match:"adam470",group:"UK",style:"academic",role:"British Academic 2",quality:"Curated pronunciation recording"},
-  {match:"collager",group:"ZA",style:"academic",role:"South African Academic",quality:"Studio recording"}
-];
 function curatedSpeakerRule(raw=""){
-  const s=stripHtml(String(raw||"")).toLowerCase();
-  return CURATED_HUMAN_SPEAKERS.find(r=>s.includes(r.match))||null
+  return typeof voiceLibrarySpeakerForArtist==="function"?voiceLibrarySpeakerForArtist(raw):null
 }
 function academicPreferenceScore(a){
   const rule=curatedSpeakerRule(a.label||"");
   if(!rule)return 0;
-  const rank={
-    "Studio recording":16,
-    "Shtooka language-learning recording":14,
-    "Shtooka recording":13,
-    "Curated pronunciation recording":11,
-    "Conversational, curated":9
-  };
-  return rank[rule.quality]||8
+  const q=String(rule.quality||"").toLowerCase();
+  if(q.includes("studio"))return 18;
+  if(q.includes("shtooka"))return 15;
+  if(q.includes("curated"))return 12;
+  return 9
 }
 function audioQualityScore(a){
   let score=0;
@@ -254,77 +241,111 @@ function normalizedAudioText(s=""){
 async function fetchTatoebaRecordings(){return []}
 function bestCommonsPlayable(info){
   const derivatives=Array.isArray(info?.derivatives)?info.derivatives:[];
-  const mp3=derivatives.find(d=>{
+  const mp3s=derivatives.filter(d=>{
     const type=String(d.type||"").toLowerCase();
     const key=String(d.transcodekey||d.shorttitle||"").toLowerCase();
     const src=String(d.src||d.url||"").toLowerCase();
     return type.includes("audio/mpeg")||key.includes("mp3")||src.includes(".mp3")
-  });
-  if(mp3?.src||mp3?.url)return mp3.src||mp3.url;
+  }).sort((a,b)=>(+(b.bitrate||0))-(+(a.bitrate||0)));
+  if(mp3s.length){
+    const m=mp3s[0];
+    return {url:m.src||m.url,mime:"audio/mpeg",bitrate:+(m.bitrate||0)||null}
+  }
   const source=info?.url||"";
-  if(/\.(mp3|wav)(\?|$)/i.test(source))return source;
+  if(/\.mp3(\?|$)/i.test(source))return {url:source,mime:"audio/mpeg",bitrate:null};
+  if(/\.wav(\?|$)/i.test(source))return {url:source,mime:"audio/wav",bitrate:null};
   const probe=document.createElement("audio");
-  if(/\.(ogg|oga)(\?|$)/i.test(source)&&probe.canPlayType("audio/ogg"))return source;
-  if(/\.flac(\?|$)/i.test(source)&&probe.canPlayType("audio/flac"))return source;
-  return ""
+  if(/\.(ogg|oga)(\?|$)/i.test(source)&&probe.canPlayType("audio/ogg"))return {url:source,mime:"audio/ogg",bitrate:null};
+  return null
 }
-async function fetchCommonsAudio(word,includeTatoeba=true){
+async function fetchCommonsAudio(word){
+  const raw=String(word||"").trim();
+  if(!raw)return [];
+  const cached=typeof voiceLibraryCacheGet==="function"?voiceLibraryCacheGet(raw):null;
+  if(cached?.length)return sortHumanAudio(cached);
+
+  const speakerConfig=(typeof VOICE_LIBRARY!=="undefined"?VOICE_LIBRARY.speakers:[])||[];
+  const prefixes=[...new Set(speakerConfig.flatMap(s=>s.searchPrefixes||[]))];
   const queries=[
-    `intitle:En-us-${word}`,`intitle:En-us-${word}-`,
-    `intitle:En-uk-${word}`,`intitle:En-uk-${word}-`,
-    `intitle:En-gb-${word}`,
-    `intitle:En-za-${word}`,`intitle:En-za-${word}-`,
-    `English pronunciation ${word}`
+    ...prefixes.map(p=>`intitle:${p}${raw}`),
+    ...prefixes.map(p=>`intitle:${p}${raw}-`),
+    `English pronunciation "${raw}"`
   ];
   const found=[];const seen=new Set();
 
   for(const q of queries){
     try{
-      const url=`https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(q)}&gsrnamespace=6&gsrlimit=16&prop=videoinfo&viprop=url%7Cderivatives%7Cextmetadata&format=json&origin=*`;
+      const url=`https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(q)}&gsrnamespace=6&gsrlimit=25&prop=videoinfo&viprop=url%7Cderivatives%7Cextmetadata&format=json&origin=*`;
       const r=await fetch(url,{mode:"cors"});if(!r.ok)continue;
       const j=await r.json();const pages=Object.values(j.query?.pages||{});
       for(const p of pages){
         const info=p.videoinfo?.[0];if(!info)continue;
         const playable=bestCommonsPlayable(info);
-        if(!playable||seen.has(playable))continue;
+        if(!playable?.url||seen.has(playable.url))continue;
         const meta=info.extmetadata||{};
         const blob=`${p.title} ${stripHtml(meta.ImageDescription?.value||"")} ${stripHtml(meta.Description?.value||"")} ${stripHtml(meta.Categories?.value||"")}`.toLowerCase();
-        if(/synthetic|text-to-speech|\btts\b|speech synthes/.test(blob))continue;
+        if(/synthetic|text-to-speech|\btts\b|speech synthes|generated voice|computer voice/.test(blob))continue;
 
-        const norm=word.toLowerCase().replace(/[^a-z]/g,"");
+        const norm=raw.toLowerCase().replace(/[^a-z]/g,"");
         const rawTitle=p.title.replace(/^File:/i,"").replace(/\.(ogg|oga|wav|mp3|flac)$/i,"").toLowerCase();
         const strippedTitle=rawTitle
           .replace(/^en[- _]?(us|uk|gb|za)[- _]?/,"")
           .replace(/[- _]?\d+$/,"")
           .replace(/[^a-z]/g,"");
         const exactTitle=strippedTitle===norm;
-        const descriptionText=`${stripHtml(meta.ImageDescription?.value||"")} ${stripHtml(meta.Description?.value||"")}`.toLowerCase();
-        const exactDescription=new RegExp(`(^|[^a-z])${norm}([^a-z]|$)`,"i").test(descriptionText);
+        const desc=`${stripHtml(meta.ImageDescription?.value||"")} ${stripHtml(meta.Description?.value||"")}`.toLowerCase();
+        const exactDescription=norm&&new RegExp(`(^|[^a-z])${norm}([^a-z]|$)`,"i").test(desc);
         if(!exactTitle&&!exactDescription)continue;
 
-        let accent="Accent not specified";
-        if(/en[- _]?za|south africa|south african/.test(blob))accent="South African";
-        else if(/en[- _]?(us)|american|united states/.test(blob))accent="American";
-        else if(/en[- _]?(uk|gb)|british|united kingdom|england|scotland|wales/.test(blob))accent="British";
-        else continue;
-
-        const group=accentGroup(accent);
-        if(group!=="US"&&group!=="UK"&&group!=="ZA")continue;
-        const artist=meta.AttributionName?.value||meta.Artist?.value||meta.Credit?.value||"";
-        const label=cleanSpeakerName(artist);
+        const artistRaw=meta.AttributionName?.value||meta.Artist?.value||meta.Credit?.value||"";
+        const rule=curatedSpeakerRule(artistRaw);
+        if(!rule)continue;
+        const label=cleanSpeakerName(artistRaw);
         if(!label)continue;
-        const license=stripHtml(meta.LicenseShortName?.value||"Open license");
-        const source=/lingua libre|ll-q/.test(blob)?"Lingua Libre / Wikimedia":"Wikimedia Commons";
-        seen.add(playable);
+
+        // Filename/metadata must agree with the curated speaker's accent group.
+        const detected=/en[- _]?za|south africa|south african/.test(blob)?"ZA":
+          /en[- _]?(us)|american|united states/.test(blob)?"US":
+          /en[- _]?(uk|gb)|british|united kingdom|england|scotland|wales/.test(blob)?"UK":"";
+        if(detected&&detected!==rule.group)continue;
+
+        const license=stripHtml(meta.LicenseShortName?.value||meta.UsageTerms?.value||"");
+        if(!license||/all rights reserved|no license/i.test(license))continue;
+
+        seen.add(playable.url);
         found.push({
-          url:playable,label,accent,group,license,source,
-          mime:/\.mp3(\?|$)/i.test(playable)?"audio/mpeg":"",
-          text:word,style:"academic"
+          url:playable.url,
+          label,
+          accent:rule.group==="US"?"American":rule.group==="UK"?"British":"South African",
+          group:rule.group,
+          style:rule.style,
+          voiceRole:rule.role,
+          qualityTag:rule.quality,
+          license,
+          source:rule.source||"Wikimedia Commons",
+          attributionUrl:`https://commons.wikimedia.org/wiki/${encodeURIComponent(p.title.replace(/ /g,"_"))}`,
+          mime:playable.mime,
+          bitrate:playable.bitrate,
+          text:raw,
+          speakerId:rule.id
         })
       }
     }catch{}
   }
-  return sortHumanAudio(dedupeAudio(found)).slice(0,30)
+  const result=sortHumanAudio(dedupeAudio(found)).slice(0,28);
+  if(result.length&&typeof voiceLibraryCacheSet==="function")voiceLibraryCacheSet(raw,result);
+  return result
+}
+async function warmVoiceLibrary(words=[]){
+  const unique=[...new Set(words.map(w=>String(w||"").trim().toLowerCase()).filter(Boolean))].slice(0,10);
+  for(const word of unique){
+    try{
+      const items=await fetchCommonsAudio(word);
+      const first=items[0];
+      if(first?.url&&typeof voiceLibraryCacheAudio==="function")voiceLibraryCacheAudio(first.url)
+    }catch{}
+    await new Promise(r=>setTimeout(r,180))
+  }
 }
 function dedupeAudio(items){
   const seen=new Set();
@@ -453,6 +474,7 @@ function playRepeated(url,context="lesson",item=null){
   const repeat=repeatForever?Infinity:Math.max(1,+rawRepeat||1);
   const speed=+(document.getElementById(speedId)?.value||1);
   lastPlayedByContext[context]={url,item};
+  if(typeof voiceLibraryCacheAudio==="function")voiceLibraryCacheAudio(url);
   let count=0;
   const a=new Audio();
   activeAudio=a;
