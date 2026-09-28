@@ -152,6 +152,13 @@ function speakerDisplayName(item,index=0){
   const direct=cleanSpeakerName(item.label||item.speaker||item.username||"");
   return direct||`Speaker ${index+1}`;
 }
+const TATOEBA_STREET_ACCENTS={
+  auride:"US",
+  mccarras:"US",
+  delian:"US",
+  cblanken:"US",
+  be:"UK"
+};
 function academicPreferenceScore(a){
   const name=cleanSpeakerName(a.label||"").toLowerCase();
   const preferred=[
@@ -244,26 +251,33 @@ async function fetchTatoebaRecordings(text){
     const url=`https://api.tatoeba.org/v1/sentences?lang=eng&q=${q}&has_audio=yes&include=audios&limit=30`;
     const res=await fetch(url,{mode:"cors"});if(!res.ok)throw new Error("Tatoeba search failed");
     const j=await res.json();
-    const rows=j.data||j.sentences||j.results||[];
+    const rows=j.data||[];
     const out=[];
     for(const row of rows){
-      const sentence=row.text||row.sentence||"";
+      const sentence=row.text||"";
       if(normalizedAudioText(sentence)!==normalizedAudioText(text))continue;
-      const sentenceId=row.id||row.sentence_id;
-      if(!sentenceId)continue;
-      const audios=Array.isArray(row.audios)?row.audios:Array.isArray(row.audio)?row.audio:[];
-      const baseUrl=`https://audio.tatoeba.org/sentences/eng/${sentenceId}.mp3`;
+      const audios=Array.isArray(row.audios)?row.audios:[];
       for(const a of audios){
-        const accent=a.accent||a.variant||a.user?.country||a.country||"Accent not specified";
-        const group=accentGroup(accent);
-        if(group!=="US"&&group!=="UK")continue;
-        const license=a.license||a.audio_license||a.user?.audio_license||a.user?.license||"";
-        if(!license||/no license|all rights reserved/i.test(String(license)))continue;
-        const label=a.author||a.username||a.user?.username||a.user?.name||"";
-        if(!cleanSpeakerName(label))continue;
+        const id=a.id;
+        const author=a.author||"";
+        const authorKey=String(author).toLowerCase();
+        const group=TATOEBA_STREET_ACCENTS[authorKey];
+        if(!id||!group)continue;
+        const licence=a.licence||a.license||"";
+        if(!licence||/no license|all rights reserved/i.test(String(licence)))continue;
+        const audioUrl=a.download_url||`https://api.tatoeba.org/v1/audios/${id}/file`;
         out.push({
-          url:baseUrl,label,accent,group,license,
-          source:"Tatoeba",mime:"audio/mpeg",text:sentence,style:"street"
+          url:audioUrl,
+          label:author,
+          accent:group==="US"?"American":"British",
+          group,
+          license:licence,
+          attributionUrl:a.attribution_url||`https://tatoeba.org/en/user/profile/${encodeURIComponent(author)}`,
+          source:"Tatoeba",
+          mime:"audio/mpeg",
+          text:sentence,
+          style:"street",
+          audioId:id
         })
       }
     }
@@ -363,8 +377,7 @@ function buildVoiceProfiles(items){
   const usedSpeakers={US:new Set(),UK:new Set(),ZA:new Set()};
   const pick=(group,style)=>{
     const candidates=pool.filter(x=>x.group===group&&x.style===style&&cleanSpeakerName(x.label||""));
-    const fresh=candidates.find(x=>!usedSpeakers[group].has(cleanSpeakerName(x.label).toLowerCase()));
-    const chosen=fresh||candidates[0]||null;
+    const chosen=candidates.find(x=>!usedSpeakers[group].has(cleanSpeakerName(x.label).toLowerCase()))||null;
     if(chosen)usedSpeakers[group].add(cleanSpeakerName(chosen.label).toLowerCase());
     return chosen
   };
@@ -420,7 +433,7 @@ function renderAudioItems(container,items,kind){
             <div class="speaker-copy">
               <strong class="speaker-name">${esc(role)} · ${esc(speaker)}</strong>
               <small class="speaker-accent">${esc(accentFullLabel(a.accent,a.group))} · ${a.style==="street"?(ar?"طبيعي يومي":"Conversational"):(ar?"واضح للتعلم":"Academic / clear")}</small>
-              <small class="speaker-license">${esc(a.source||kind)} · ${esc(a.license||"Open license")}</small>
+              <small class="speaker-license">${esc(a.source||kind)} · ${esc(a.license||"Open license")}${a.attributionUrl?` · <a href="${esc(a.attributionUrl)}" target="_blank" rel="noopener">source</a>`:""}</small>
             </div>
             <span class="audio-source">Human</span>
           </div>`
