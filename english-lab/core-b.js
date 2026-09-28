@@ -255,6 +255,7 @@ function dedupeAudio(items){
 }
 function renderAudioItems(container,items,kind){
   container._audioItems=items;
+  const context=container.id==="wordAudioList"?"word":"lesson";
   container.innerHTML=items.map((a,i)=>`
     <div class="audio-item" data-audio-group="${a.group||accentGroup(a.accent)}">
       <button class="audio-play" data-audio-i="${i}" aria-label="Play human recording">▶</button>
@@ -264,21 +265,24 @@ function renderAudioItems(container,items,kind){
       </div>
       <span class="audio-source">Human · ${esc(a.source||kind)}</span>
     </div>`).join("");
-  container.querySelectorAll("[data-audio-i]").forEach(b=>b.addEventListener("click",()=>playRepeated(items[+b.dataset.audioI].url)))
+  container.querySelectorAll("[data-audio-i]").forEach(b=>b.addEventListener("click",()=>playRepeated(items[+b.dataset.audioI].url,context)))
 }
 function applyAudioAccentFilter(group,containerId){
   const c=document.getElementById(containerId);if(!c)return;
   c.querySelectorAll("[data-audio-group]").forEach(el=>el.classList.toggle("hidden",group!=="all"&&el.dataset.audioGroup!==group))
 }
-function playRepeated(url){
+function playRepeated(url,context="lesson"){
   if(activeAudio){activeAudio.pause();activeAudio=null}
-  const repeat=+(document.getElementById("humanRepeat")?.value||1);
-  const speed=+(document.getElementById("humanSpeed")?.value||1);
+  const repeatId=context==="word"?"wordRepeat":"humanRepeat";
+  const speedId=context==="word"?"wordSpeed":"humanSpeed";
+  const repeat=+(document.getElementById(repeatId)?.value||1);
+  const speed=+(document.getElementById(speedId)?.value||1);
   let count=0;
   const play=()=>{
     const a=new Audio(url);activeAudio=a;a.playbackRate=speed;
     a.onended=()=>{count++;if(count<repeat)play()};
     a.play().catch(()=>toast("This human recording could not be played in your browser."))
   };
-  play();adjustSkill("listening",.3);state.attempts.listening++;saveState()
+  play();
+  if(context==="lesson"){adjustSkill("listening",.3);state.attempts.listening++;saveState()}
 }
