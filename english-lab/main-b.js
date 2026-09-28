@@ -81,22 +81,22 @@ function applySettings(){
   document.documentElement.dir=ar?"rtl":"ltr";
   document.documentElement.lang=state.settings.lang;
   document.getElementById("langBtn").textContent=ar?"EN":"ع";
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content",state.settings.theme==="light"?"#f5f7fb":"#11151d");
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content",state.settings.theme==="light"?"#fbf8f6":"#161617");
 
   const set=(sel,en,arabic)=>{const el=document.querySelector(sel);if(el)el.textContent=ar?arabic:en};
   set('[data-i18n="welcome"]','Welcome back','مرحبًا بعودتك');
-  set('#view-learn .page-head h1','Choose your level','اختر مستواك');
-  set('#view-learn .page-head p','Each lesson follows the same clear learning flow from listening to speaking.','كل درس يتبع مسارًا واضحًا من الاستماع حتى التحدث.');
-  set('#view-review .page-head h1','Your memory queue','قائمة المراجعة');
-  set('#view-review .page-head p','Only the words and sentences that need attention come back here.','تعود هنا فقط الكلمات والجمل التي تحتاج إلى مراجعة.');
-  set('#view-games .page-head h1','Short review games','ألعاب مراجعة قصيرة');
-  set('#view-games .page-head p','Simple games built from the vocabulary you actually need to remember.','ألعاب بسيطة مبنية على الكلمات التي تحتاج إلى تذكرها.');
-  set('#view-progress .page-head h1','Your learning map','خريطة تقدمك');
-  set('#view-progress .page-head p','See your current estimate and which skills need the next push.','شاهد مستواك الحالي والمهارات التي تحتاج إلى تركيز أكبر.');
+  set('#view-learn .page-head h1','Lessons','الدروس');
+  set('#view-learn .page-head p','Choose your next unit.','اختر وحدتك التالية.');
+  set('#view-review .page-head h1','My Words','كلماتي');
+  set('#view-review .page-head p','Saved words return when it is time to review them.','الكلمات التي حفظتها تعود لك في وقت المراجعة المناسب.');
+  set('#view-games .page-head h1','Practice','التدريب');
+  set('#view-games .page-head p','Short practice built from what you need.','تمارين قصيرة مبنية على الكلمات التي تحتاجها.');
+  set('#view-progress .page-head h1','Your progress','تقدمك');
+  set('#view-progress .page-head p','Your journey in simple, clear numbers.','رحلتك في أرقام بسيطة وواضحة.');
 
-  const nav=[['Home','الرئيسية'],['Learn','تعلم'],['Review','مراجعة'],['Games','ألعاب'],['Progress','التقدم']];
+  const nav=[['Home','الرئيسية'],['Lessons','الدروس'],['Words','كلماتي'],['Progress','التقدم']];
   document.querySelectorAll('.nav-item').forEach((b,i)=>{
-    const sm=b.querySelector('small');if(sm)sm.textContent=ar?nav[i][1]:nav[i][0]
+    const sm=b.querySelector('small');if(sm&&nav[i])sm.textContent=ar?nav[i][1]:nav[i][0]
   });
 
   set('#openCoachBtn','Ask','اسأل');
