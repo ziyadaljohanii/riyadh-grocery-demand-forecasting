@@ -194,9 +194,22 @@
           </div>
           <div id="humanAudioList" class="audio-list"><div class="empty-state small">Searching for a real human recording…</div></div>
           <div class="audio-controls-row">
-            <label>Repeat <select id="humanRepeat"><option>1</option><option>3</option><option>5</option><option>10</option></select></label>
+            <label>Repeat <select id="humanRepeat"><option value="1">1×</option><option value="3">3×</option><option value="5">5×</option><option value="10">10×</option><option value="loop">∞</option></select></label>
             <label>Speed <select id="humanSpeed"><option value="0.7">0.7×</option><option value="0.85">0.85×</option><option value="1" selected>1×</option><option value="1.15">1.15×</option></select></label>
+            <button id="replayHumanBtn" class="small-btn">↺ Replay</button>
+            <button id="stopHumanBtn" class="small-btn">■ Stop</button>
           </div>
+
+          <section class="transcript-panel">
+            <div class="transcript-head">
+              <div>
+                <span class="eyebrow">REAL SPEECH</span>
+                <h3><span class="ar-label">النص المرتبط بالصوت</span><span class="en-label">Interactive transcript</span></h3>
+              </div>
+              <span class="human-badge"><span class="ar-label">صوت بشري فقط</span><span class="en-label">Human only</span></span>
+            </div>
+            <div id="lessonTranscript" class="transcript-list"></div>
+          </section>
         </div>
       </section>
 
@@ -242,7 +255,7 @@
     <section class="word-audio-section">
       <div class="human-audio-head"><div><span class="human-badge">REAL HUMAN AUDIO</span><h3><span class="ar-label">اسمع الكلمة</span><span class="en-label">Hear the word</span></h3></div><button id="wordAudioRefresh" class="small-btn">Refresh</button></div>
       <div id="wordAccentTabs" class="accent-tabs"><button class="chip active" data-word-accent="all">الكل</button><button class="chip" data-word-accent="US">أمريكي</button><button class="chip" data-word-accent="UK">بريطاني</button><button class="chip" data-word-accent="ZA">جنوب أفريقيا</button></div>
-      <div class="audio-controls-row"><label>Repeat <select id="wordRepeat"><option>1</option><option>3</option><option>5</option><option>10</option></select></label><label>Speed <select id="wordSpeed"><option value="0.7">0.7×</option><option value="0.85">0.85×</option><option value="1" selected>1×</option><option value="1.15">1.15×</option></select></label></div>
+      <div class="audio-controls-row"><label>Repeat <select id="wordRepeat"><option value="1">1×</option><option value="3">3×</option><option value="5">5×</option><option value="10">10×</option><option value="loop">∞</option></select></label><label>Speed <select id="wordSpeed"><option value="0.7">0.7×</option><option value="0.85">0.85×</option><option value="1" selected>1×</option><option value="1.15">1.15×</option></select></label><button id="replayWordBtn" class="small-btn">↺ Replay</button><button id="stopWordBtn" class="small-btn">■ Stop</button></div>
       <div id="wordAudioList" class="audio-list"></div>
     </section>
     <div class="word-actions"><button id="addReviewBtn" class="primary-btn">◆ Save</button><button id="openReminderBtn" class="ghost-btn">⏰ Reminder</button><button id="wordPracticeBtn" class="ghost-btn">✦ Practice</button></div>
