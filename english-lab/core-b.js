@@ -1,5 +1,7 @@
 let lessonHumanRecordings=[];
 let currentHumanModel=null;
+let lastPlayedByContext={lesson:null,word:null};
+let activeTranscriptText="";
 const LESSON_STEPS=[
   {id:"step-listen",label:"LISTEN",title:"Listen first",subtitle:"Start with a real human recording before you read."},
   {id:"step-reading",label:"READ",title:"Read the story",subtitle:"Tap any word to open its meaning, pronunciation and review tools."},
@@ -33,7 +35,7 @@ async function openLesson(id){
   document.getElementById("lessonLevelBadge").textContent=currentUnit.level;
   document.getElementById("lessonTitle").textContent=currentUnit.title;
   document.getElementById("lessonSubtitle").textContent=currentUnit.topic;
-  renderPassage();renderVocab();renderGrammar();renderQuiz();renderSpeakWrite();renderShadow();
+  renderPassage();renderVocab();renderGrammar();renderQuiz();renderSpeakWrite();renderShadow();renderLessonTranscript();
   document.getElementById("humanAudioList").innerHTML='<div class="empty-state small">Looking for real human recordings…</div>';
   document.getElementById("passageArabic").textContent=currentUnit.arabic;
   document.getElementById("passageArabic").classList.add("hidden");
@@ -427,7 +429,18 @@ function renderAudioItems(container,items,kind){
     </section>`
   }).join("");
 
-  container.querySelectorAll("[data-audio-url]").forEach(b=>b.addEventListener("click",()=>playRepeated(b.dataset.audioUrl,context)));
+  container.querySelectorAll("[data-audio-url]").forEach(b=>b.addEventListener("click",()=>{
+    const url=b.dataset.audioUrl;
+    const item=items.find(x=>x.url===url)||null;
+    if(context==="lesson"&&item){
+      currentHumanModel=item;
+      if(item.text){
+        activeTranscriptText=item.text;
+        highlightTranscript(item.text);
+      }
+    }
+    playRepeated(url,context,item)
+  }));
   updateAccentTabCounts(container,profiles)
 }
 function applyAudioAccentFilter(group,containerId){
@@ -436,31 +449,98 @@ function applyAudioAccentFilter(group,containerId){
     section.classList.toggle("hidden",group!=="all"&&section.dataset.audioSection!==group)
   })
 }
-function playRepeated(url,context="lesson"){
+function stopActiveAudio(){
+  if(activeAudio){
+    activeAudio.pause();
+    try{activeAudio.currentTime=0}catch{}
+    activeAudio.src="";
+    activeAudio=null
+  }
+}
+function replayLastAudio(context="lesson"){
+  const last=lastPlayedByContext[context];
+  if(!last){toast(state.settings.lang==="ar"?"شغّل صوتًا أولًا.":"Play a voice first.");return}
+  playRepeated(last.url,context,last.item)
+}
+function playRepeated(url,context="lesson",item=null){
   if(!url){toast(state.settings.lang==="ar"?"لم يتم العثور على ملف صوت صالح.":"No playable audio file was found.");return}
-  if(activeAudio){activeAudio.pause();activeAudio.src="";activeAudio=null}
+  stopActiveAudio();
   const repeatId=context==="word"?"wordRepeat":"humanRepeat";
   const speedId=context==="word"?"wordSpeed":"humanSpeed";
-  const repeat=+(document.getElementById(repeatId)?.value||1);
+  const rawRepeat=document.getElementById(repeatId)?.value||"1";
+  const repeatForever=rawRepeat==="loop";
+  const repeat=repeatForever?Infinity:Math.max(1,+rawRepeat||1);
   const speed=+(document.getElementById(speedId)?.value||1);
+  lastPlayedByContext[context]={url,item};
   let count=0;
   const a=new Audio();
   activeAudio=a;
   a.preload="auto";
   a.src=url;
   a.playbackRate=speed;
+  a.onloadedmetadata=()=>{a.playbackRate=speed};
   a.onended=()=>{
     count++;
-    if(count<repeat){
-      a.currentTime=0;
+    if(repeatForever||count<repeat){
+      try{a.currentTime=0}catch{}
       a.playbackRate=speed;
-      a.play().catch(()=>toast(state.settings.lang==="ar"?"تعذر تكرار التسجيل على هذا المتصفح.":"The browser blocked repeated playback."))
+      const p=a.play();
+      if(p&&typeof p.catch==="function")p.catch(()=>toast(state.settings.lang==="ar"?"تعذر تكرار التسجيل. اضغط تشغيل مرة أخرى.":"Repeat was blocked. Tap play again."))
     }
   };
   a.onerror=()=>toast(state.settings.lang==="ar"?"تعذر تشغيل هذا التسجيل. جرّب متحدثًا آخر.":"This recording could not be played. Try another speaker.");
   const attempt=a.play();
   if(attempt&&typeof attempt.catch==="function"){
-    attempt.catch(()=>toast(state.settings.lang==="ar"?"اضغط زر التشغيل مرة أخرى. المتصفح منع التشغيل الأول.":"Tap play again. The browser blocked the first playback."))
+    attempt.catch(()=>toast(state.settings.lang==="ar"?"اضغط تشغيل مرة أخرى. المتصفح منع التشغيل الأول.":"Tap play again. The browser blocked the first playback."))
   }
   if(context==="lesson"){adjustSkill("listening",.3);state.attempts.listening++;saveState()}
+}
+function renderLessonTranscript(){
+  const el=document.getElementById("lessonTranscript");
+  if(!el||!currentUnit)return;
+  const sentences=sentenceCandidates();
+  el.innerHTML=sentences.map((sentence,i)=>{
+    const parts=sentence.split(/(\b[A-Za-z][A-Za-z'-]*\b)/g);
+    const html=parts.map(p=>/^[A-Za-z][A-Za-z'-]*$/.test(p)
+      ?`<span class="transcript-word" data-transcript-word="${esc(p.toLowerCase())}">${esc(p)}</span>`
+      :esc(p)).join("");
+    return `<div class="transcript-row" data-transcript-row="${i}">
+      <button class="transcript-play" data-transcript-play="${i}" aria-label="Play sentence">▶</button>
+      <div class="transcript-text">${html}</div>
+      <span class="transcript-repeat">↺</span>
+    </div>`
+  }).join("");
+  el.querySelectorAll("[data-transcript-play]").forEach(b=>b.addEventListener("click",e=>{
+    e.stopPropagation();
+    playTranscriptSentence(sentences[+b.dataset.transcriptPlay],+b.dataset.transcriptPlay)
+  }));
+  el.querySelectorAll("[data-transcript-row]").forEach(row=>row.addEventListener("click",()=>{
+    playTranscriptSentence(sentences[+row.dataset.transcriptRow],+row.dataset.transcriptRow)
+  }));
+  el.querySelectorAll("[data-transcript-word]").forEach(w=>w.addEventListener("click",e=>{
+    e.stopPropagation();openWord(w.dataset.transcriptWord)
+  }))
+}
+function highlightTranscript(text){
+  const el=document.getElementById("lessonTranscript");if(!el)return;
+  const norm=normalizedAudioText(text);
+  el.querySelectorAll("[data-transcript-row]").forEach(row=>{
+    row.classList.toggle("active",normalizedAudioText(row.querySelector(".transcript-text")?.textContent||"")===norm)
+  })
+}
+async function playTranscriptSentence(text,index){
+  activeTranscriptText=text;
+  highlightTranscript(text);
+  const row=document.querySelector(`[data-transcript-row="${index}"]`);
+  row?.classList.add("loading");
+  const found=await fetchTatoebaRecordings(text);
+  row?.classList.remove("loading");
+  const preferred=found.find(x=>x.group==="US"&&x.style==="street")||
+    found.find(x=>x.group==="UK"&&x.style==="street")||found[0];
+  if(!preferred){
+    toast(state.settings.lang==="ar"?"لا يوجد تسجيل بشري مطابق لهذه الجملة.":"No exact human recording is available for this sentence.");
+    return
+  }
+  currentHumanModel=preferred;
+  playRepeated(preferred.url,"lesson",preferred)
 }
