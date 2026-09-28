@@ -21,11 +21,12 @@ function todayKey(d=new Date()){return d.toISOString().slice(0,10)}
 function levelUnits(level){return UNITS.filter(u=>u.level===level)}
 function esc(s=""){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 function stripHtml(s=""){const d=document.createElement("div");d.innerHTML=s;return d.textContent||""}
-function toast(msg){const el=document.getElementById("toast");el.textContent=msg;el.classList.remove("hidden");clearTimeout(el._t);el._t=setTimeout(()=>el.classList.add("hidden"),2400)}
+function toast(msg){const el=document.getElementById("toast");if(!el)return;el.textContent=msg;el.classList.remove("hidden");clearTimeout(el._t);el._t=setTimeout(()=>el.classList.add("hidden"),2400)}
 function setView(name){
   document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
   document.getElementById(`view-${name}`)?.classList.add("active");
-  document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.nav===name));
+  document.querySelectorAll("[data-nav]").forEach(b=>b.classList.toggle("active",b.dataset.nav===name));
+  document.body.classList.toggle("lesson-active",name==="lesson");
   window.scrollTo({top:0,behavior:"smooth"});
   if(name==="home")renderHome();
   if(name==="learn")renderLearn();
@@ -42,29 +43,54 @@ function updateStreak(){
   }else state.streak=1;
   state.lastStudyDate=t;saveState()
 }
-function dueReviews(){const now=Date.now();return Object.values(state.reviews).filter(r=>!r.known&&(!r.due||r.due<=now)).sort((a,b)=>(a.due||0)-(b.due||0))}
+function dueReviews(){
+  const now=Date.now();
+  return Object.values(state.reviews).filter(r=>!r.known&&(!r.due||r.due<=now)).sort((a,b)=>(a.due||0)-(b.due||0))
+}
 function estimateLevel(){
   const avg=Object.values(state.skills).reduce((a,b)=>a+b,0)/5;
-  let lvl="A1";for(const l of LEVELS){if(avg>=LEVEL_THRESHOLDS[l])lvl=l}
-  state.level=lvl;return lvl
+  let lvl="A1";
+  for(const l of LEVELS){if(avg>=LEVEL_THRESHOLDS[l])lvl=l}
+  state.level=lvl;
+  return lvl
 }
 function weakestSkill(){return Object.entries(state.skills).sort((a,b)=>a[1]-b[1])[0][0]}
 function skillLabel(k){return ({listening:"Listening",reading:"Reading",speaking:"Speaking",writing:"Writing",vocabulary:"Vocabulary"})[k]||k}
 function addXP(n){state.xp+=n;updateStreak();saveState()}
-function adjustSkill(skill,delta){state.skills[skill]=Math.max(0,Math.min(100,(state.skills[skill]||0)+delta));estimateLevel();saveState()}
-
-function coachTip(){
-  const due=dueReviews().length,weak=weakestSkill();
-  if(due>5)return `You have ${due} reviews waiting. Clear a few before adding more new words.`;
-  if(weak==="speaking")return "Your next priority is speaking. Shadow one short sentence until the rhythm feels natural.";
-  if(weak==="listening")return "Your next priority is listening. Start with a human recording at 0.85×, then return to normal speed.";
-  if(weak==="writing")return "Your next priority is writing. Use short, accurate sentences before making them longer.";
-  if(weak==="vocabulary")return "Your next priority is vocabulary. Save only useful words and review them in context.";
-  return "Keep the next lesson simple: listen first, then read, then use the English yourself."
+function adjustSkill(skill,delta){
+  state.skills[skill]=Math.max(0,Math.min(100,(state.skills[skill]||0)+delta));
+  estimateLevel();saveState()
 }
 function currentCourseUnit(level){
   const units=levelUnits(level);
   return units.find(u=>!state.completed[u.id])||units[units.length-1]||UNITS[0]
+}
+function rankedWeakWords(){
+  const keys=new Set([...Object.keys(state.reviews),...Object.keys(state.selectedWords),...Object.keys(state.hardWords)]);
+  return [...keys].map(word=>{
+    const r=state.reviews[word]||{};
+    const score=(r.wrong||0)*4+(state.hardWords[word]?4:0)+(state.selectedWords[word]||0)*.8-(r.correct||0)*.6;
+    return {word,meaning:r.meaning||meaningFor?.(word)||"",score}
+  }).sort((a,b)=>b.score-a.score).filter(x=>x.score>0)
+}
+function adaptiveSnapshot(){
+  const weak=weakestSkill();
+  const attempts=Object.values(state.attempts||{}).reduce((a,b)=>a+(+b||0),0);
+  const evidence=(state.quizHistory?.length||0)+attempts+Object.keys(state.reviews||{}).length;
+  const confidence=Math.min(94,52+Math.round(Math.sqrt(evidence)*7));
+  const words=rankedWeakWords().slice(0,5);
+  let reason=`${skillLabel(weak)} is currently your lowest skill score.`;
+  if(weak==="listening")reason="You need more listening exposure. Human-audio practice will appear more often.";
+  if(weak==="speaking")reason="Speaking attempts are behind your other skills. Shadowing is prioritised.";
+  if(weak==="vocabulary")reason="Saved and difficult words are affecting your vocabulary score. Review is prioritised.";
+  if(weak==="writing")reason="Writing is your lowest area. Short sentence practice is prioritised.";
+  if(weak==="reading")reason="Reading checks need more accuracy. Comprehension practice is prioritised.";
+  return {weak,weakLabel:skillLabel(weak),confidence,words,reason}
+}
+function coachTip(){
+  const snap=adaptiveSnapshot(),due=dueReviews().length;
+  if(due>5)return `${due} reviews are due. Clear a few before adding more new words.`;
+  return snap.reason
 }
 function renderHome(){
   const level=estimateLevel();
@@ -72,28 +98,44 @@ function renderHome(){
   const current=currentCourseUnit(level);
   const done=units.filter(u=>state.completed[u.id]).length;
   const pct=units.length?Math.round(done/units.length*100):0;
+  const snap=adaptiveSnapshot();
 
-  document.getElementById("homeLevelText").textContent=`${level} · ${LEVEL_NAMES[level]}`;
-  document.getElementById("xpValue").textContent=state.xp;
-  document.getElementById("streakValue").textContent=state.streak;
-  document.getElementById("dueValue").textContent=dueReviews().length;
-  document.getElementById("coachSummary").textContent=`You’re on ${level}. ${skillLabel(weakestSkill())} needs the most attention right now.`;
-  document.getElementById("coachTip").textContent=coachTip();
-  document.getElementById("courseProgressText").textContent=`${done} of ${units.length} lessons complete`;
-  document.getElementById("courseProgressBar").style.width=pct+"%";
+  const put=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value};
+  put("homeLevelText",`${level} · ${LEVEL_NAMES[level]}`);
+  put("xpValue",state.xp);put("xpValueDesktop",state.xp);
+  put("streakValue",state.streak);put("streakValueDesktop",state.streak);
+  put("dueValue",dueReviews().length);put("dueValueDesktop",dueReviews().length);
+  put("coachSummary",`Your course is adapting to ${snap.weakLabel.toLowerCase()} and your saved-word performance.`);
+  put("coachTip",coachTip());put("coachTipDesktop",coachTip());
+  put("aiWeakSkillMobile",snap.weakLabel);put("aiWeakSkillDesktop",snap.weakLabel);
+  put("courseProgressText",`${done} of ${units.length} lessons complete`);
+  const bar=document.getElementById("courseProgressBar");if(bar)bar.style.width=pct+"%";
 
-  document.getElementById("learningPath").innerHTML=units.map((u,i)=>{
-    const isDone=!!state.completed[u.id];
-    const isCurrent=current?.id===u.id&&!isDone;
-    const status=isDone?"done":isCurrent?"current":"upcoming";
-    const symbol=isDone?"✓":isCurrent?"▶":i+1;
-    return `<button class="path-node ${status}" data-path-unit="${u.id}">
-      <span class="path-bubble">${symbol}</span>
-      <span class="path-copy"><strong>${esc(u.title)}</strong><small>${esc(u.topic)}</small></span>
-    </button>`
+  const pathItems=[];
+  units.forEach((u,i)=>{
+    pathItems.push({type:"lesson",unit:u});
+    if(i===0&&dueReviews().length>0)pathItems.push({type:"review",title:"Smart review",sub:`${dueReviews().length} words are ready`});
+    if(i===1)pathItems.push({type:"speaking",title:"Speaking boost",sub:`Extra ${snap.weak==="speaking"?"priority ":""}shadowing`});
+  });
+
+  document.getElementById("learningPath").innerHTML=pathItems.map((item,i)=>{
+    if(item.type==="lesson"){
+      const u=item.unit,isDone=!!state.completed[u.id],isCurrent=current?.id===u.id&&!isDone;
+      return `<button class="path-node ${isDone?"done":isCurrent?"current":""}" data-path-unit="${u.id}">
+        ${isCurrent?'<span class="node-start">YOUR NEXT STEP</span>':""}
+        <span class="path-bubble">${isDone?"✓":isCurrent?"★":u.emoji}</span>
+        <span class="path-label"><b>${esc(u.title)}</b>${esc(u.topic)}</span>
+      </button>`
+    }
+    if(item.type==="review"){
+      return `<button class="path-node review" data-path-action="review"><span class="path-bubble">↻</span><span class="path-label"><b>${item.title}</b>${item.sub}</span></button>`
+    }
+    return `<button class="path-node speaking" data-path-action="speaking"><span class="path-bubble">◉</span><span class="path-label"><b>${item.title}</b>${item.sub}</span></button>`
   }).join("");
 
   document.querySelectorAll("[data-path-unit]").forEach(b=>b.addEventListener("click",()=>openLesson(b.dataset.pathUnit)));
+  document.querySelectorAll('[data-path-action="review"]').forEach(b=>b.addEventListener("click",()=>setView("review")));
+  document.querySelectorAll('[data-path-action="speaking"]').forEach(b=>b.addEventListener("click",()=>startRecommended("speaking")));
 }
 function startRecommended(skill){
   const unit=currentCourseUnit(state.level);
@@ -103,15 +145,17 @@ function startRecommended(skill){
 function renderLearn(){
   const selected=state.settings.selectedLevel||state.level;
   document.getElementById("levelTabs").innerHTML=LEVELS.map(l=>`<button class="chip ${l===selected?"active":""}" data-lvl-tab="${l}">${l} · ${LEVEL_NAMES[l]}</button>`).join("");
-  document.querySelectorAll("[data-lvl-tab]").forEach(b=>b.addEventListener("click",()=>{state.settings.selectedLevel=b.dataset.lvlTab;saveState();renderLearn()}));
+  document.querySelectorAll("[data-lvl-tab]").forEach(b=>b.addEventListener("click",()=>{
+    state.settings.selectedLevel=b.dataset.lvlTab;saveState();renderLearn()
+  }));
   document.getElementById("unitGrid").innerHTML=levelUnits(selected).map((u,i)=>{
     const done=!!state.completed[u.id];
     return `<article class="unit-card">
-      <div class="unit-art"><span class="unit-level">${u.level} · ${i+1}</span><span class="emoji">${u.emoji}</span></div>
+      <div class="unit-art"><span class="unit-level">${u.level} · Lesson ${i+1}</span><span class="emoji">${u.emoji}</span></div>
       <div class="unit-body">
         <strong>${esc(u.title)}</strong><p>${esc(u.topic)}</p>
-        <div class="unit-meta"><span>Listen</span><span>Read</span><span>Speak</span></div>
-        <button class="${done?"secondary-btn":"primary-btn"}" data-unit="${u.id}">${done?"Review lesson":"Start"}</button>
+        <div class="unit-meta"><span>Listen</span><span>Words</span><span>Speak</span></div>
+        <button class="${done?"secondary-btn":"primary-btn"}" data-unit="${u.id}">${done?"Practise again":"Start lesson"}</button>
       </div>
     </article>`
   }).join("");
