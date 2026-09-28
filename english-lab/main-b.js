@@ -4,10 +4,12 @@ function setupEvents(){
 
   document.getElementById("continueBtn").onclick=()=>startRecommended(weakestSkill());
   document.getElementById("quickSpeakingBtn").onclick=()=>startRecommended("speaking");
+  document.getElementById("quickSpeakingDesktop").onclick=()=>startRecommended("speaking");
   document.getElementById("retakePlacementBtn").onclick=openPlacement;
   document.getElementById("lessonPrevBtn").onclick=()=>showLessonStep(lessonStepIndex-1);
   document.getElementById("lessonNextBtn").onclick=()=>showLessonStep(lessonStepIndex+1);
   document.getElementById("openCoachBtn").onclick=()=>document.getElementById("coachDialog").showModal();
+  document.getElementById("openCoachBtnMobile").onclick=()=>document.getElementById("coachDialog").showModal();
   document.getElementById("coachSendBtn").onclick=()=>{
     const i=document.getElementById("coachInput");
     if(i.value.trim()){askCoach(i.value.trim());i.value=""}
@@ -39,6 +41,8 @@ function setupEvents(){
   document.getElementById("completeLessonBtn").onclick=completeLesson;
 
   document.getElementById("wordAudioRefresh").onclick=()=>loadWordAudio(false);
+  document.getElementById("wordPracticeBtn").onclick=openWordPractice;
+  document.getElementById("wordPracticeCheck").onclick=checkWordPractice;
   document.getElementById("addReviewBtn").onclick=()=>addReviewWord(currentWord,document.getElementById("wordMeaning").textContent);
   document.getElementById("openReminderBtn").onclick=()=>document.getElementById("reminderOptions").classList.toggle("hidden");
   document.querySelectorAll("[data-reminder]").forEach(b=>b.onclick=()=>{
