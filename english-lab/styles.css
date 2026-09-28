@@ -311,3 +311,83 @@ textarea,input{width:100%;border:1px solid var(--line);background:var(--surface-
   color:var(--muted);
   border:1px solid var(--line)
 }
+
+
+/* Interactive human transcript inspired by the reference videos */
+.transcript-panel{
+  margin-top:16px;
+  padding-top:16px;
+  border-top:1px solid var(--line)
+}
+.transcript-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:10px
+}
+.transcript-head h3{margin:4px 0 0;font-size:17px}
+.transcript-list{display:grid;gap:7px}
+.transcript-row{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  gap:10px;
+  align-items:center;
+  padding:11px 12px;
+  border:1px solid var(--line);
+  background:var(--surface);
+  border-radius:14px;
+  transition:.16s ease;
+  cursor:pointer
+}
+.transcript-row:hover{border-color:color-mix(in srgb,var(--red) 40%,var(--line));background:var(--red-soft)}
+.transcript-row.active{
+  border-color:var(--red);
+  background:linear-gradient(180deg,var(--red-soft),var(--surface))
+}
+.transcript-row.loading{opacity:.65}
+.transcript-play{
+  width:34px;height:34px;
+  border-radius:50%;
+  border:0;
+  background:var(--red);
+  color:#fff;
+  display:grid;
+  place-items:center;
+  box-shadow:0 4px 12px rgba(148,47,43,.16)
+}
+.transcript-text{
+  font-size:13px;
+  line-height:1.65;
+  direction:ltr;
+  text-align:left
+}
+.transcript-word{
+  border-bottom:1px dotted color-mix(in srgb,var(--red) 55%,transparent);
+  border-radius:4px;
+  padding:1px 1px
+}
+.transcript-word:hover{
+  color:var(--red);
+  background:var(--red-soft)
+}
+.transcript-repeat{color:var(--muted);font-size:16px}
+.audio-controls-row .small-btn{
+  min-height:33px;
+  white-space:nowrap
+}
+@media(max-width:520px){
+  .transcript-row{grid-template-columns:auto minmax(0,1fr)}
+  .transcript-repeat{display:none}
+  .audio-controls-row{
+    display:grid;
+    grid-template-columns:1fr 1fr
+  }
+  .audio-controls-row label{
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:11px;
+    padding:7px 8px;
+    justify-content:space-between
+  }
+}
