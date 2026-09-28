@@ -157,6 +157,7 @@ const TATOEBA_STREET_ACCENTS={
   mccarras:"US",
   delian:"US",
   cblanken:"US",
+  ck:"US",
   be:"UK"
 };
 function academicPreferenceScore(a){
