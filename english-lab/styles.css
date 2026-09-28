@@ -292,3 +292,22 @@ textarea,input{width:100%;border:1px solid var(--line);background:var(--surface-
   .audio-source{grid-column:2;justify-self:start}
   .speaker-license{max-width:220px}
 }
+
+
+.audio-item.unavailable{
+  opacity:.55;
+  background:var(--surface-2);
+  border-style:dashed
+}
+.audio-play.disabled{
+  display:grid;place-items:center;
+  background:var(--surface);
+  color:var(--muted);
+  border:1px solid var(--line);
+  box-shadow:none
+}
+.audio-source.muted{
+  background:var(--surface);
+  color:var(--muted);
+  border:1px solid var(--line)
+}
