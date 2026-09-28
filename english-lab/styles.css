@@ -457,3 +457,17 @@ textarea,input{width:100%;border:1px solid var(--line);background:var(--surface-
 @media(max-width:520px){
   .listen-options{grid-template-columns:1fr}
 }
+
+
+.speaker-quality{
+  display:inline-flex!important;
+  width:max-content;
+  max-width:100%;
+  margin-top:2px;
+  padding:3px 6px;
+  border-radius:999px;
+  background:var(--green-soft);
+  color:var(--green)!important;
+  font-size:7.5px!important;
+  font-weight:800
+}
