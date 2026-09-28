@@ -152,23 +152,31 @@ function speakerDisplayName(item,index=0){
   const direct=cleanSpeakerName(item.label||item.speaker||item.username||"");
   return direct||`Speaker ${index+1}`;
 }
-const TATOEBA_STREET_ACCENTS={
-  auride:"US",
-  mccarras:"US",
-  delian:"US",
-  cblanken:"US",
-  ck:"US",
-  be:"UK"
-};
+const CURATED_HUMAN_SPEAKERS=[
+  {match:"dvortygirl",group:"US",style:"street",role:"American Street",quality:"Conversational, curated"},
+  {match:"treemama",group:"US",style:"academic",role:"American Academic 1",quality:"Shtooka recording"},
+  {match:"droesperanto",group:"US",style:"academic",role:"American Academic 2",quality:"Shtooka recording"},
+  {match:"judith franck",group:"UK",style:"street",role:"British Street",quality:"Shtooka language-learning recording"},
+  {match:"yuumei",group:"UK",style:"academic",role:"British Academic 1",quality:"Curated pronunciation recording"},
+  {match:"atmarsden",group:"UK",style:"academic",role:"British Academic 2",quality:"Curated pronunciation recording"},
+  {match:"adam470",group:"UK",style:"academic",role:"British Academic 2",quality:"Curated pronunciation recording"},
+  {match:"collager",group:"ZA",style:"academic",role:"South African Academic",quality:"Studio recording"}
+];
+function curatedSpeakerRule(raw=""){
+  const s=stripHtml(String(raw||"")).toLowerCase();
+  return CURATED_HUMAN_SPEAKERS.find(r=>s.includes(r.match))||null
+}
 function academicPreferenceScore(a){
-  const name=cleanSpeakerName(a.label||"").toLowerCase();
-  const preferred=[
-    "droesperanto","treemama","dvortygirl",
-    "judith franck","adam470","andrew marsden","atmarsden","yuumei",
-    "collager"
-  ];
-  const i=preferred.findIndex(x=>name.includes(x));
-  return i<0?0:(preferred.length-i)*2;
+  const rule=curatedSpeakerRule(a.label||"");
+  if(!rule)return 0;
+  const rank={
+    "Studio recording":16,
+    "Shtooka language-learning recording":14,
+    "Shtooka recording":13,
+    "Curated pronunciation recording":11,
+    "Conversational, curated":9
+  };
+  return rank[rule.quality]||8
 }
 function audioQualityScore(a){
   let score=0;
@@ -202,11 +210,8 @@ async function findHumanLessonAudio(silent=false){
   list.innerHTML='<div class="empty-state small">Searching real human recordings…</div>';
   let found=[];
   for(const text of sentenceCandidates()){
-    const [tatoeba,commons]=await Promise.all([
-      fetchTatoebaRecordings(text),
-      fetchCommonsAudio(text,false)
-    ]);
-    found.push(...tatoeba.map(x=>({...x,text})),...commons.map(x=>({...x,text})));
+    const commons=await fetchCommonsAudio(text,false);
+    found.push(...commons.map(x=>({...x,text})));
     if(found.length>=14)break
   }
   found=sortHumanAudio(dedupeAudio(found));
@@ -246,45 +251,7 @@ async function playShadowHuman(){
 function normalizedAudioText(s=""){
   return String(s).trim().toLowerCase().replace(/[.!?]+$/,"").replace(/\s+/g," ")
 }
-async function fetchTatoebaRecordings(text){
-  try{
-    const q=encodeURIComponent('"'+text+'"');
-    const url=`https://api.tatoeba.org/v1/sentences?lang=eng&q=${q}&has_audio=yes&include=audios&limit=30`;
-    const res=await fetch(url,{mode:"cors"});if(!res.ok)throw new Error("Tatoeba search failed");
-    const j=await res.json();
-    const rows=j.data||[];
-    const out=[];
-    for(const row of rows){
-      const sentence=row.text||"";
-      if(normalizedAudioText(sentence)!==normalizedAudioText(text))continue;
-      const audios=Array.isArray(row.audios)?row.audios:[];
-      for(const a of audios){
-        const id=a.id;
-        const author=a.author||"";
-        const authorKey=String(author).toLowerCase();
-        const group=TATOEBA_STREET_ACCENTS[authorKey];
-        if(!id||!group)continue;
-        const licence=a.licence||a.license||"";
-        if(!licence||/no license|all rights reserved/i.test(String(licence)))continue;
-        const audioUrl=a.download_url||`https://api.tatoeba.org/v1/audios/${id}/file`;
-        out.push({
-          url:audioUrl,
-          label:author,
-          accent:group==="US"?"American":"British",
-          group,
-          license:licence,
-          attributionUrl:a.attribution_url||`https://tatoeba.org/en/user/profile/${encodeURIComponent(author)}`,
-          source:"Tatoeba",
-          mime:"audio/mpeg",
-          text:sentence,
-          style:"street",
-          audioId:id
-        })
-      }
-    }
-    return dedupeAudio(out)
-  }catch{return []}
-}
+async function fetchTatoebaRecordings(){return []}
 function bestCommonsPlayable(info){
   const derivatives=Array.isArray(info?.derivatives)?info.derivatives:[];
   const mp3=derivatives.find(d=>{
@@ -310,13 +277,6 @@ async function fetchCommonsAudio(word,includeTatoeba=true){
     `English pronunciation ${word}`
   ];
   const found=[];const seen=new Set();
-
-  if(includeTatoeba){
-    const conversational=await fetchTatoebaRecordings(word);
-    for(const t of conversational){
-      if(!seen.has(t.url)){seen.add(t.url);found.push(t)}
-    }
-  }
 
   for(const q of queries){
     try{
@@ -382,14 +342,20 @@ function buildVoiceProfiles(items){
     if(chosen)usedSpeakers[group].add(cleanSpeakerName(chosen.label).toLowerCase());
     return chosen
   };
+  const byRole=(role)=>pool.find(x=>x.voiceRole===role&&!usedSpeakers[x.group]?.has(cleanSpeakerName(x.label).toLowerCase()))||null;
+  const takeRole=(role,group,style)=>{
+    const exact=byRole(role);
+    if(exact){usedSpeakers[group].add(cleanSpeakerName(exact.label).toLowerCase());return exact}
+    return pick(group,style)
+  };
   return [
-    {group:"US",style:"street",slot:"American Street",ar:"أمريكي شوارع",item:pick("US","street")},
-    {group:"US",style:"academic",slot:"American Academic 1",ar:"أمريكي أكاديمي 1",item:pick("US","academic")},
-    {group:"US",style:"academic",slot:"American Academic 2",ar:"أمريكي أكاديمي 2",item:pick("US","academic")},
-    {group:"UK",style:"street",slot:"British Street",ar:"بريطاني شوارع",item:pick("UK","street")},
-    {group:"UK",style:"academic",slot:"British Academic 1",ar:"بريطاني أكاديمي 1",item:pick("UK","academic")},
-    {group:"UK",style:"academic",slot:"British Academic 2",ar:"بريطاني أكاديمي 2",item:pick("UK","academic")},
-    {group:"ZA",style:"academic",slot:"South African Academic",ar:"جنوب أفريقيا أكاديمي",item:pick("ZA","academic")}
+    {group:"US",style:"street",slot:"American Street",ar:"أمريكي شوارع",item:takeRole("American Street","US","street")},
+    {group:"US",style:"academic",slot:"American Academic 1",ar:"أمريكي أكاديمي 1",item:takeRole("American Academic 1","US","academic")},
+    {group:"US",style:"academic",slot:"American Academic 2",ar:"أمريكي أكاديمي 2",item:takeRole("American Academic 2","US","academic")},
+    {group:"UK",style:"street",slot:"British Street",ar:"بريطاني شوارع",item:takeRole("British Street","UK","street")},
+    {group:"UK",style:"academic",slot:"British Academic 1",ar:"بريطاني أكاديمي 1",item:takeRole("British Academic 1","UK","academic")},
+    {group:"UK",style:"academic",slot:"British Academic 2",ar:"بريطاني أكاديمي 2",item:takeRole("British Academic 2","UK","academic")},
+    {group:"ZA",style:"academic",slot:"South African Academic",ar:"جنوب أفريقيا أكاديمي",item:takeRole("South African Academic","ZA","academic")}
   ]
 }
 function updateAccentTabCounts(container,profiles){
@@ -434,6 +400,7 @@ function renderAudioItems(container,items,kind){
             <div class="speaker-copy">
               <strong class="speaker-name">${esc(role)} · ${esc(speaker)}</strong>
               <small class="speaker-accent">${esc(accentFullLabel(a.accent,a.group))} · ${a.style==="street"?(ar?"طبيعي يومي":"Conversational"):(ar?"واضح للتعلم":"Academic / clear")}</small>
+              <small class="speaker-quality">${esc(a.qualityTag||"Curated human recording")}</small>
               <small class="speaker-license">${esc(a.source||kind)} · ${esc(a.license||"Open license")}${a.attributionUrl?` · <a href="${esc(a.attributionUrl)}" target="_blank" rel="noopener">source</a>`:""}</small>
             </div>
             <span class="audio-source">Human</span>
@@ -559,7 +526,7 @@ async function renderListenChoose(){
   let voice=null;
   const findVoice=async()=>{
     if(voice)return voice;
-    const recordings=await fetchCommonsAudio(target[0],true);
+    const recordings=await fetchCommonsAudio(target[0],false);
     const profiles=buildVoiceProfiles(recordings);
     voice=profiles.find(p=>p.item&&p.group==="US"&&p.style==="academic")?.item ||
           profiles.find(p=>p.item&&p.group==="UK"&&p.style==="academic")?.item ||
@@ -609,7 +576,7 @@ async function playTranscriptSentence(text,index){
   highlightTranscript(text);
   const row=document.querySelector(`[data-transcript-row="${index}"]`);
   row?.classList.add("loading");
-  const found=await fetchTatoebaRecordings(text);
+  const found=await fetchCommonsAudio(text,false);
   row?.classList.remove("loading");
   const preferred=found.find(x=>x.group==="US"&&x.style==="street")||
     found.find(x=>x.group==="UK"&&x.style==="street")||found[0];
