@@ -3,7 +3,10 @@ function setupEvents(){
   document.querySelectorAll("[data-close-dialog]").forEach(b=>b.addEventListener("click",()=>document.getElementById(b.dataset.closeDialog).close()));
 
   document.getElementById("continueBtn").onclick=()=>startRecommended(weakestSkill());
+  document.getElementById("quickSpeakingBtn").onclick=()=>startRecommended("speaking");
   document.getElementById("retakePlacementBtn").onclick=openPlacement;
+  document.getElementById("lessonPrevBtn").onclick=()=>showLessonStep(lessonStepIndex-1);
+  document.getElementById("lessonNextBtn").onclick=()=>showLessonStep(lessonStepIndex+1);
   document.getElementById("openCoachBtn").onclick=()=>document.getElementById("coachDialog").showModal();
   document.getElementById("coachSendBtn").onclick=()=>{
     const i=document.getElementById("coachInput");
