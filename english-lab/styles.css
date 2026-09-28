@@ -242,3 +242,53 @@ textarea,input{width:100%;border:1px solid var(--line);background:var(--surface-
   .level-chip{top:14px;left:14px}.quote-card{font-size:13px}
   .page-head h1{font-size:33px}.progress-ring-card{display:block}.ring-wrap{margin-bottom:14px}
 }
+
+/* Human voice library */
+.audio-list{gap:14px}
+.audio-group-section{display:grid;gap:8px}
+.audio-group-title{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:3px 2px 2px;
+}
+.audio-group-title>div{display:flex;flex-direction:column;gap:2px}
+.audio-group-title strong{font-size:12px;letter-spacing:.01em}
+.audio-group-title small{font-size:8px;color:var(--muted)}
+.audio-group-title>span{
+  min-width:26px;height:24px;padding:0 7px;border-radius:999px;
+  display:grid;place-items:center;background:var(--red-soft);color:var(--red);
+  font-size:9px;font-weight:900
+}
+.audio-group-list{display:grid;gap:7px}
+.audio-item{
+  min-height:64px;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  background:linear-gradient(180deg,var(--surface),var(--surface-2));
+  border-color:color-mix(in srgb,var(--line) 88%,var(--red) 12%)
+}
+.audio-play{
+  width:42px;height:42px;
+  box-shadow:inset 0 -4px 0 rgba(88,23,22,.15),0 4px 12px rgba(148,47,43,.12)
+}
+.speaker-copy{min-width:0;display:flex;flex-direction:column;gap:2px}
+.speaker-name{
+  display:block;font-size:12px!important;font-weight:850;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
+.speaker-accent{
+  display:block!important;font-size:9px!important;color:var(--text)!important;font-weight:650
+}
+.speaker-license{
+  display:block!important;font-size:7.5px!important;color:var(--muted)!important;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
+.audio-source{
+  font-weight:800;letter-spacing:.02em;
+  background:var(--green-soft);color:var(--green)
+}
+.accent-tabs{padding-bottom:2px}
+.accent-tabs .chip{white-space:nowrap}
+@media(max-width:520px){
+  .audio-item{grid-template-columns:auto minmax(0,1fr)}
+  .audio-source{grid-column:2;justify-self:start}
+  .speaker-license{max-width:220px}
+}
