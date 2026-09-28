@@ -19,6 +19,8 @@ function setupEvents(){
   });
 
   document.getElementById("findHumanAudioBtn").onclick=()=>findHumanLessonAudio(false);
+  document.getElementById("replayHumanBtn").onclick=()=>replayLastAudio("lesson");
+  document.getElementById("stopHumanBtn").onclick=stopActiveAudio;
   document.querySelectorAll("[data-accent-filter]").forEach(b=>b.onclick=()=>{
     document.querySelectorAll("[data-accent-filter]").forEach(x=>x.classList.remove("active"));
     b.classList.add("active");
@@ -41,6 +43,8 @@ function setupEvents(){
   document.getElementById("completeLessonBtn").onclick=completeLesson;
 
   document.getElementById("wordAudioRefresh").onclick=()=>loadWordAudio(false);
+  document.getElementById("replayWordBtn").onclick=()=>replayLastAudio("word");
+  document.getElementById("stopWordBtn").onclick=stopActiveAudio;
   document.getElementById("wordPracticeBtn").onclick=openWordPractice;
   document.getElementById("wordPracticeCheck").onclick=checkWordPractice;
   document.getElementById("addReviewBtn").onclick=()=>addReviewWord(currentWord,document.getElementById("wordMeaning").textContent);
