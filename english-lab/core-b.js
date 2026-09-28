@@ -176,36 +176,67 @@ async function playShadowHuman(){
   document.getElementById("shadowSentence").textContent=currentHumanModel.text||document.getElementById("shadowSentence").textContent;
   playRepeated(currentHumanModel.url)
 }
+function normalizedAudioText(s=""){
+  return String(s).trim().toLowerCase().replace(/[.!?]+$/,"").replace(/\s+/g," ")
+}
 async function fetchTatoebaRecordings(text){
   try{
     const q=encodeURIComponent('"'+text+'"');
     const url=`https://api.tatoeba.org/v1/sentences?lang=eng&q=${q}&has_audio=yes&include=audios&limit=20`;
-    const res=await fetch(url);if(!res.ok)throw new Error();
+    const res=await fetch(url,{mode:"cors"});if(!res.ok)throw new Error("Tatoeba search failed");
     const j=await res.json();
     const rows=j.data||j.sentences||j.results||[];
     const out=[];
     for(const row of rows){
       const sentence=row.text||row.sentence||"";
-      if(sentence.trim().toLowerCase()!==text.trim().toLowerCase())continue;
+      if(normalizedAudioText(sentence)!==normalizedAudioText(text))continue;
+      const sentenceId=row.id||row.sentence_id;
+      if(!sentenceId)continue;
       const audios=Array.isArray(row.audios)?row.audios:Array.isArray(row.audio)?row.audio:[];
-      for(const a of audios){
-        const id=a.id||a.audio_id;
-        const url=a.url||(id?`https://tatoeba.org/audio/download/${id}`:"");
-        if(!url)continue;
-        const accent=a.accent||a.variant||a.user?.country||"Accent not specified";
+      const baseUrl=`https://audio.tatoeba.org/sentences/eng/${sentenceId}.mp3`;
+      if(audios.length){
+        for(const a of audios){
+          const accent=a.accent||a.variant||a.user?.country||"Accent not specified";
+          out.push({
+            url:baseUrl,
+            label:a.author||a.username||a.user?.username||"Tatoeba contributor",
+            accent,
+            group:accentGroup(accent),
+            license:a.license||"Tatoeba contribution",
+            source:"Tatoeba MP3",
+            text:sentence
+          })
+        }
+      }else{
         out.push({
-          url,
-          label:a.author||a.username||a.user?.username||"Tatoeba contributor",
-          accent,
-          group:accentGroup(accent),
-          license:a.license||"Tatoeba contribution",
-          source:"Tatoeba",
+          url:baseUrl,
+          label:"Tatoeba contributor",
+          accent:"Accent not specified",
+          group:"Other",
+          license:"Tatoeba contribution",
+          source:"Tatoeba MP3",
           text:sentence
         })
       }
     }
-    return out
+    return dedupeAudio(out)
   }catch{return []}
+}
+function bestCommonsPlayable(info){
+  const derivatives=Array.isArray(info?.derivatives)?info.derivatives:[];
+  const mp3=derivatives.find(d=>{
+    const type=String(d.type||"").toLowerCase();
+    const key=String(d.transcodekey||d.shorttitle||"").toLowerCase();
+    const src=String(d.src||d.url||"").toLowerCase();
+    return type.includes("audio/mpeg")||key.includes("mp3")||src.includes(".mp3")
+  });
+  if(mp3?.src||mp3?.url)return mp3.src||mp3.url;
+  const source=info?.url||"";
+  if(/\.(mp3|wav)(\?|$)/i.test(source))return source;
+  const probe=document.createElement("audio");
+  if(/\.(ogg|oga)(\?|$)/i.test(source)&&probe.canPlayType("audio/ogg"))return source;
+  if(/\.flac(\?|$)/i.test(source)&&probe.canPlayType("audio/flac"))return source;
+  return ""
 }
 async function fetchCommonsAudio(word){
   const queries=[
@@ -216,28 +247,36 @@ async function fetchCommonsAudio(word){
     `English pronunciation ${word}`
   ];
   const found=[];const seen=new Set();
+
+  const tatoebaWord=await fetchTatoebaRecordings(word);
+  for(const t of tatoebaWord){
+    if(!seen.has(t.url)){seen.add(t.url);found.push(t)}
+  }
+
   for(const q of queries){
     try{
-      const url=`https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(q)}&gsrnamespace=6&gsrlimit=18&prop=imageinfo&iiprop=url%7Cextmetadata&format=json&origin=*`;
-      const r=await fetch(url);if(!r.ok)continue;
+      const url=`https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(q)}&gsrnamespace=6&gsrlimit=12&prop=videoinfo&viprop=url%7Cderivatives%7Cextmetadata&format=json&origin=*`;
+      const r=await fetch(url,{mode:"cors"});if(!r.ok)continue;
       const j=await r.json();const pages=Object.values(j.query?.pages||{});
       for(const p of pages){
-        const info=p.imageinfo?.[0];
-        if(!info?.url||seen.has(info.url)||!(/\.(ogg|oga|wav|mp3)$/i.test(info.url)))continue;
+        const info=p.videoinfo?.[0];
+        if(!info)continue;
+        const playable=bestCommonsPlayable(info);
+        if(!playable||seen.has(playable))continue;
         const meta=info.extmetadata||{};
         const blob=`${p.title} ${stripHtml(meta.ImageDescription?.value||"")} ${stripHtml(meta.Description?.value||"")} ${stripHtml(meta.Categories?.value||"")}`.toLowerCase();
-        if(/synthetic|text-to-speech|tts|speech synthes/.test(blob))continue;
+        if(/synthetic|text-to-speech|\btts\b|speech synthes/.test(blob))continue;
         const norm=word.toLowerCase().replace(/[^a-z]/g,"");
         if(!p.title.toLowerCase().replace(/[^a-z]/g,"").includes(norm))continue;
-        seen.add(info.url);
+        seen.add(playable);
         let accent="Accent not specified";
         if(/en[- _]?(us)|american|united states/.test(blob))accent="US";
         else if(/en[- _]?(uk|gb)|british|england/.test(blob))accent="UK";
         else if(/en[- _]?au|austral/.test(blob))accent="Australian";
         else if(/en[- _]?ca|canad/.test(blob))accent="Canadian";
-        const source=/lingua libre|ll-q/.test(blob)?"Lingua Libre / Wikimedia":"Wikimedia Commons";
+        const source=/lingua libre|ll-q/.test(blob)?"Lingua Libre / Wikimedia":"Wikimedia Commons MP3";
         found.push({
-          url:info.url,
+          url:playable,
           label:stripHtml(meta.Artist?.value||p.title.replace(/^File:/,"Human contributor")),
           accent,
           group:accentGroup(accent),
@@ -272,17 +311,30 @@ function applyAudioAccentFilter(group,containerId){
   c.querySelectorAll("[data-audio-group]").forEach(el=>el.classList.toggle("hidden",group!=="all"&&el.dataset.audioGroup!==group))
 }
 function playRepeated(url,context="lesson"){
-  if(activeAudio){activeAudio.pause();activeAudio=null}
+  if(!url){toast(state.settings.lang==="ar"?"لم يتم العثور على ملف صوت صالح.":"No playable audio file was found.");return}
+  if(activeAudio){activeAudio.pause();activeAudio.src="";activeAudio=null}
   const repeatId=context==="word"?"wordRepeat":"humanRepeat";
   const speedId=context==="word"?"wordSpeed":"humanSpeed";
   const repeat=+(document.getElementById(repeatId)?.value||1);
   const speed=+(document.getElementById(speedId)?.value||1);
   let count=0;
-  const play=()=>{
-    const a=new Audio(url);activeAudio=a;a.playbackRate=speed;
-    a.onended=()=>{count++;if(count<repeat)play()};
-    a.play().catch(()=>toast("This human recording could not be played in your browser."))
+  const a=new Audio();
+  activeAudio=a;
+  a.preload="auto";
+  a.src=url;
+  a.playbackRate=speed;
+  a.onended=()=>{
+    count++;
+    if(count<repeat){
+      a.currentTime=0;
+      a.playbackRate=speed;
+      a.play().catch(()=>toast(state.settings.lang==="ar"?"تعذر تكرار التسجيل على هذا المتصفح.":"The browser blocked repeated playback."))
+    }
   };
-  play();
+  a.onerror=()=>toast(state.settings.lang==="ar"?"تعذر تشغيل هذا التسجيل. جرّب متحدثًا آخر.":"This recording could not be played. Try another speaker.");
+  const attempt=a.play();
+  if(attempt&&typeof attempt.catch==="function"){
+    attempt.catch(()=>toast(state.settings.lang==="ar"?"اضغط زر التشغيل مرة أخرى. المتصفح منع التشغيل الأول.":"Tap play again. The browser blocked the first playback."))
+  }
   if(context==="lesson"){adjustSkill("listening",.3);state.attempts.listening++;saveState()}
 }
