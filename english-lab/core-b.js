@@ -35,7 +35,7 @@ async function openLesson(id){
   document.getElementById("lessonLevelBadge").textContent=currentUnit.level;
   document.getElementById("lessonTitle").textContent=currentUnit.title;
   document.getElementById("lessonSubtitle").textContent=currentUnit.topic;
-  renderPassage();renderVocab();renderGrammar();renderQuiz();renderSpeakWrite();renderShadow();renderLessonTranscript();
+  renderPassage();renderVocab();renderGrammar();renderQuiz();renderSpeakWrite();renderShadow();renderLessonTranscript();renderListenChoose();
   document.getElementById("humanAudioList").innerHTML='<div class="empty-state small">Looking for real human recordings…</div>';
   document.getElementById("passageArabic").textContent=currentUnit.arabic;
   document.getElementById("passageArabic").classList.add("hidden");
@@ -535,6 +535,68 @@ function renderLessonTranscript(){
     e.stopPropagation();openWord(w.dataset.transcriptWord)
   }))
 }
+async function renderListenChoose(){
+  const stage=document.getElementById("listenChooseStage");
+  if(!stage||!currentUnit)return;
+  const pool=(currentUnit.vocab||[]).slice(0,Math.min(4,currentUnit.vocab.length));
+  if(pool.length<2){
+    stage.innerHTML='<div class="empty-state small">Not enough vocabulary for this exercise.</div>';
+    return
+  }
+  const target=pool[0];
+  const options=[...pool].sort(()=>Math.random()-.5);
+  stage.innerHTML=`
+    <div class="listen-prompt">
+      <button id="listenChoosePlay" class="listen-big-play" aria-label="Play human recording">▶</button>
+      <div><strong>${state.settings.lang==="ar"?"اسمع الكلمة ثم اختر معناها":"Listen to the word, then choose its meaning"}</strong>
+      <small id="listenChooseVoiceLabel">${state.settings.lang==="ar"?"جارٍ البحث عن متحدث بشري…":"Finding a human speaker…"}</small></div>
+    </div>
+    <div class="listen-options">
+      ${options.map(([w,ar],i)=>`<button class="listen-option" data-listen-opt="${esc(w)}"><span dir="rtl">${esc(ar)}</span></button>`).join("")}
+    </div>
+    <div id="listenChooseFeedback" class="mini-result hidden"></div>`;
+
+  let voice=null;
+  const findVoice=async()=>{
+    if(voice)return voice;
+    const recordings=await fetchCommonsAudio(target[0],true);
+    const profiles=buildVoiceProfiles(recordings);
+    voice=profiles.find(p=>p.item&&p.group==="US"&&p.style==="academic")?.item ||
+          profiles.find(p=>p.item&&p.group==="UK"&&p.style==="academic")?.item ||
+          profiles.find(p=>p.item&&p.group==="ZA")?.item ||
+          recordings[0]||null;
+    const label=document.getElementById("listenChooseVoiceLabel");
+    if(label){
+      label.textContent=voice
+        ?`${speakerDisplayName(voice)} · ${accentFullLabel(voice.accent,voice.group)} · Human`
+        :(state.settings.lang==="ar"?"لا يوجد تسجيل بشري متاح لهذه الكلمة":"No human recording available for this word");
+    }
+    return voice
+  };
+  const playBtn=document.getElementById("listenChoosePlay");
+  playBtn.onclick=async()=>{
+    playBtn.classList.add("loading");
+    const v=await findVoice();
+    playBtn.classList.remove("loading");
+    if(v)playRepeated(v.url,"lesson",v);
+    else toast(state.settings.lang==="ar"?"لا يوجد تسجيل بشري متاح.":"No human recording is available.")
+  };
+  findVoice();
+
+  stage.querySelectorAll("[data-listen-opt]").forEach(btn=>btn.onclick=()=>{
+    const correct=btn.dataset.listenOpt===target[0];
+    stage.querySelectorAll("[data-listen-opt]").forEach(x=>x.disabled=true);
+    btn.classList.add(correct?"correct":"wrong");
+    if(!correct)stage.querySelector(`[data-listen-opt="${CSS.escape(target[0])}"]`)?.classList.add("correct");
+    const fb=document.getElementById("listenChooseFeedback");
+    fb.classList.remove("hidden");
+    fb.textContent=correct
+      ?(state.settings.lang==="ar"?`صحيح ✓ الكلمة هي: ${target[0]}`:`Correct ✓ The word was: ${target[0]}`)
+      :(state.settings.lang==="ar"?`الإجابة الصحيحة: ${target[1]}`:`Correct meaning: ${target[1]}`);
+    adjustSkill("listening",correct?1.5:-.5);addXP(correct?5:1)
+  })
+}
+
 function highlightTranscript(text){
   const el=document.getElementById("lessonTranscript");if(!el)return;
   const norm=normalizedAudioText(text);
