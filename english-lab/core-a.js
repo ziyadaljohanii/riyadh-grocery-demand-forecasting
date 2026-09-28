@@ -56,6 +56,7 @@ function estimateLevel(){
 }
 function weakestSkill(){return Object.entries(state.skills).sort((a,b)=>a[1]-b[1])[0][0]}
 function skillLabel(k){return ({listening:"Listening",reading:"Reading",speaking:"Speaking",writing:"Writing",vocabulary:"Vocabulary"})[k]||k}
+function skillLabelAr(k){return ({listening:"الاستماع",reading:"القراءة",speaking:"التحدث",writing:"الكتابة",vocabulary:"المفردات"})[k]||k}
 function addXP(n){state.xp+=n;updateStreak();saveState()}
 function adjustSkill(skill,delta){
   state.skills[skill]=Math.max(0,Math.min(100,(state.skills[skill]||0)+delta));
@@ -93,6 +94,7 @@ function coachTip(){
   return snap.reason
 }
 function renderHome(){
+  const ar=state.settings.lang==="ar";
   const level=estimateLevel();
   const units=levelUnits(level);
   const current=currentCourseUnit(level);
@@ -105,24 +107,25 @@ function renderHome(){
   put("xpValue",state.xp);put("xpValueDesktop",state.xp);
   put("streakValue",state.streak);put("streakValueDesktop",state.streak);
   put("dueValue",dueReviews().length);put("dueValueDesktop",dueReviews().length);
-  put("coachSummary",`Your course is adapting to ${snap.weakLabel.toLowerCase()} and your saved-word performance.`);
-  put("coachTip",coachTip());put("coachTipDesktop",coachTip());
-  put("aiWeakSkillMobile",snap.weakLabel);put("aiWeakSkillDesktop",snap.weakLabel);
-  put("courseProgressText",`${done} of ${units.length} lessons complete`);
+  put("coachSummary",ar?`خطتك تتكيف مع مستواك، والتركيز الآن على ${skillLabelAr(snap.weak)}.`:`Your course is adapting to ${snap.weakLabel.toLowerCase()} and your saved-word performance.`);
+  const tip=ar?(snap.weak==="listening"?"الاستماع يحتاج ممارسة أكثر. سنعطي التسجيلات البشرية أولوية أكبر.":snap.weak==="speaking"?"التحدث يحتاج ممارسة أكثر. سنعطي الشادووينق أولوية أكبر.":snap.weak==="vocabulary"?"بعض الكلمات المحفوظة تحتاج مراجعة أكثر.":snap.weak==="writing"?"الكتابة تحتاج تدريبًا أكثر على الجمل القصيرة.":"القراءة تحتاج دقة أعلى في فهم النص.") : coachTip();
+  put("coachTip",tip);put("coachTipDesktop",tip);
+  put("aiWeakSkillMobile",ar?skillLabelAr(snap.weak):snap.weakLabel);put("aiWeakSkillDesktop",ar?skillLabelAr(snap.weak):snap.weakLabel);
+  put("courseProgressText",ar?`${done} من ${units.length} دروس مكتملة`:`${done} of ${units.length} lessons complete`);
   const bar=document.getElementById("courseProgressBar");if(bar)bar.style.width=pct+"%";
 
   const pathItems=[];
   units.forEach((u,i)=>{
     pathItems.push({type:"lesson",unit:u});
-    if(i===0&&dueReviews().length>0)pathItems.push({type:"review",title:"Smart review",sub:`${dueReviews().length} words are ready`});
-    if(i===1)pathItems.push({type:"speaking",title:"Speaking boost",sub:`Extra ${snap.weak==="speaking"?"priority ":""}shadowing`});
+    if(i===0&&dueReviews().length>0)pathItems.push({type:"review",title:ar?"مراجعة ذكية":"Smart review",sub:ar?`${dueReviews().length} كلمات جاهزة للمراجعة`:`${dueReviews().length} words are ready`});
+    if(i===1)pathItems.push({type:"speaking",title:ar?"تدريب التحدث":"Speaking boost",sub:ar?"شادووينق بصوت بشري":"Human shadowing"});
   });
 
   document.getElementById("learningPath").innerHTML=pathItems.map((item,i)=>{
     if(item.type==="lesson"){
       const u=item.unit,isDone=!!state.completed[u.id],isCurrent=current?.id===u.id&&!isDone;
       return `<button class="path-node ${isDone?"done":isCurrent?"current":""}" data-path-unit="${u.id}">
-        ${isCurrent?'<span class="node-start">YOUR NEXT STEP</span>':""}
+        ${isCurrent?`<span class="node-start">${ar?"الخطوة التالية":"YOUR NEXT STEP"}</span>`:""}
         <span class="path-bubble">${isDone?"✓":isCurrent?"★":u.emoji}</span>
         <span class="path-label"><b>${esc(u.title)}</b>${esc(u.topic)}</span>
       </button>`
@@ -140,9 +143,10 @@ function renderHome(){
 function startRecommended(skill){
   const unit=currentCourseUnit(state.level);
   openLesson(unit.id);
-  if(skill)toast(`${skillLabel(skill)} is your current focus.`)
+  if(skill)toast(state.settings.lang==="ar"?`التركيز الحالي: ${skillLabelAr(skill)}`:`${skillLabel(skill)} is your current focus.`)
 }
 function renderLearn(){
+  const ar=state.settings.lang==="ar";
   const selected=state.settings.selectedLevel||state.level;
   document.getElementById("levelTabs").innerHTML=LEVELS.map(l=>`<button class="chip ${l===selected?"active":""}" data-lvl-tab="${l}">${l} · ${LEVEL_NAMES[l]}</button>`).join("");
   document.querySelectorAll("[data-lvl-tab]").forEach(b=>b.addEventListener("click",()=>{
@@ -155,7 +159,7 @@ function renderLearn(){
       <div class="unit-body">
         <strong>${esc(u.title)}</strong><p>${esc(u.topic)}</p>
         <div class="unit-meta"><span>Listen</span><span>Words</span><span>Speak</span></div>
-        <button class="${done?"secondary-btn":"primary-btn"}" data-unit="${u.id}">${done?"Practise again":"Start lesson"}</button>
+        <button class="${done?"secondary-btn":"primary-btn"}" data-unit="${u.id}">${ar?(done?"راجع الدرس":"ابدأ الدرس"):(done?"Practise again":"Start lesson")}</button>
       </div>
     </article>`
   }).join("");
