@@ -3,7 +3,7 @@
   "short_name":"English Lab",
   "start_url":"./",
   "display":"standalone",
-  "background_color":"#fbfbff",
-  "theme_color":"#fbfbff",
+  "background_color":"#fbf8f6",
+  "theme_color":"#fbf8f6",
   "icons":[{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
 }
