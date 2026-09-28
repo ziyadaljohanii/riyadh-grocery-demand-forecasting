@@ -1,339 +1,258 @@
 <!doctype html>
-<html lang="en" dir="ltr">
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <meta name="theme-color" content="#fbfbff" />
+  <meta name="theme-color" content="#fbf8f6" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="English Lab" />
-  <title>English Lab</title>
+  <meta name="apple-mobile-web-app-title" content="My English" />
+  <title>My English</title>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body>
+<body class="light">
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
-  <div class="desktop-shell">
-    <aside class="side-rail">
-      <button class="brand-lockup" data-nav="home">
-        <span class="logo-orb">E</span>
-        <span>English Lab</span>
-      </button>
-      <nav class="rail-nav">
-        <button class="rail-item active" data-nav="home"><span>⌂</span><b>Learn</b></button>
-        <button class="rail-item" data-nav="review"><span>◆</span><b>My Words</b><i id="reviewBadgeDesktop" class="mini-badge hidden">0</i></button>
-        <button class="rail-item" data-nav="games"><span>✦</span><b>Practice</b></button>
-        <button class="rail-item" data-nav="progress"><span>◔</span><b>Progress</b></button>
-        <button class="rail-item" data-nav="learn"><span>▦</span><b>Levels</b></button>
-      </nav>
-      <div class="rail-footer">
-        <button id="langBtn" class="rail-utility">العربية / EN</button>
-        <button id="themeBtn" class="rail-utility">Appearance</button>
-      </div>
-    </aside>
+  <header class="site-header">
+    <button class="brand-mini" data-nav="home" aria-label="Home">
+      <span class="brand-dot">E</span>
+      <span>My English</span>
+    </button>
 
-    <main class="app-shell">
-      <section id="view-home" class="view active">
-        <div class="mobile-topline">
-          <button class="mobile-brand" data-nav="home"><span class="logo-orb">E</span><b>English Lab</b></button>
-          <div class="top-stats">
-            <span>🔥 <b id="streakValue">0</b></span>
-            <span>⚡ <b id="xpValue">0</b></span>
+    <nav class="top-nav">
+      <button data-nav="home" class="top-link active"><span class="ar-label">الرئيسية</span><span class="en-label">Home</span></button>
+      <button data-nav="learn" class="top-link"><span class="ar-label">الدروس</span><span class="en-label">Lessons</span></button>
+      <button data-nav="review" class="top-link"><span class="ar-label">كلماتي</span><span class="en-label">My Words</span></button>
+      <button data-nav="progress" class="top-link"><span class="ar-label">التقدم</span><span class="en-label">Progress</span></button>
+    </nav>
+
+    <div class="header-actions">
+      <button id="langBtn" class="header-icon">EN</button>
+      <button id="themeBtn" class="header-icon">◐</button>
+      <button id="profileBtn" class="profile-icon" title="Profile">⌁</button>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <section id="view-home" class="view active">
+      <section class="hero-home">
+        <div class="hero-copy">
+          <span class="eyebrow">YOUR ENGLISH JOURNEY</span>
+          <h1><span class="ar-label">رحلتك في تعلم الإنجليزية</span><span class="en-label">Your English journey</span></h1>
+          <p id="coachSummary">بطريقتك، وبوتيرتك الخاصة.</p>
+          <div class="hero-actions">
+            <button id="continueBtn" class="primary-btn"><span class="ar-label">ابدأ التعلم الآن</span><span class="en-label">Start learning</span> <b>←</b></button>
+            <button id="retakePlacementBtn" class="ghost-btn"><span class="ar-label">اختبار المستوى</span><span class="en-label">Level check</span></button>
           </div>
         </div>
 
-        <section class="unit-banner">
+        <div class="hero-corner">
+          <div class="level-chip">
+            <small><span class="ar-label">مستواك الحالي</span><span class="en-label">Current level</span></small>
+            <strong id="homeLevelText">A2 · Explorer</strong>
+          </div>
+          <div class="quote-card">
+            <span>“</span>
+            <p>A little progress<br/>every day makes a big difference.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="home-strip">
+        <button class="home-mini-card" data-nav="review">
+          <span class="mini-icon">◆</span>
+          <div><strong><span class="ar-label">مراجعة الكلمات</span><span class="en-label">Word review</span></strong><small><b id="dueValue">0</b> <span class="ar-label">مستحقة الآن</span><span class="en-label">due now</span></small></div>
+        </button>
+        <button class="home-mini-card" id="quickSpeakingBtn">
+          <span class="mini-icon">◉</span>
+          <div><strong><span class="ar-label">التحدث</span><span class="en-label">Speaking</span></strong><small><span class="ar-label">تدريب شادووينق</span><span class="en-label">Human shadowing</span></small></div>
+        </button>
+        <button class="home-mini-card" data-nav="progress">
+          <span class="mini-icon">◔</span>
+          <div><strong><span class="ar-label">تحليل التقدم</span><span class="en-label">Progress analysis</span></strong><small id="aiWeakSkillMobile">Listening</small></div>
+        </button>
+      </section>
+
+      <section class="home-next">
+        <div class="section-title-row">
           <div>
-            <span class="unit-kicker">ADAPTIVE COURSE</span>
-            <h1 id="homeLevelText">A2 · Explorer</h1>
-            <p id="coachSummary">Your course adapts as you practise.</p>
+            <span class="eyebrow">NEXT</span>
+            <h2><span class="ar-label">الخطوة التالية</span><span class="en-label">Your next step</span></h2>
           </div>
-          <button id="retakePlacementBtn" class="banner-action">Level check</button>
-        </section>
-
-        <section class="path-card">
-          <div class="path-heading">
-            <div>
-              <span class="eyebrow">YOUR PATH</span>
-              <h2>Keep moving forward</h2>
-            </div>
-            <div class="path-progress">
-              <span id="courseProgressText">0 of 3 lessons</span>
-              <div class="path-meter"><i id="courseProgressBar" style="width:0%"></i></div>
-            </div>
-          </div>
-
-          <div id="learningPath" class="learning-path"></div>
-
-          <div class="continue-wrap">
-            <button id="continueBtn" class="start-pill">START NEXT LESSON</button>
-          </div>
-        </section>
-
-        <section class="mobile-insights">
-          <div class="insight-card ai-card">
-            <div class="insight-icon">AI</div>
-            <div><span>Today’s focus</span><strong id="aiWeakSkillMobile">Listening</strong><small id="coachTip">Your plan changes from your mistakes and review history.</small></div>
-            <button id="openCoachBtnMobile" class="round-action">›</button>
-          </div>
-          <div class="quick-row">
-            <button class="quick-tile" data-nav="review"><span>◆</span><b>My Words</b><small><strong id="dueValue">0</strong> due</small></button>
-            <button class="quick-tile" id="quickSpeakingBtn"><span>◉</span><b>Speaking</b><small>Shadowing</small></button>
-            <button class="quick-tile" data-nav="progress"><span>◔</span><b>Progress</b><small>Your skills</small></button>
-          </div>
-        </section>
-      </section>
-
-      <section id="view-learn" class="view">
-        <div class="page-title">
-          <span class="eyebrow">ALL LEVELS</span>
-          <h1>Choose your course</h1>
-          <p>Move from A1 to C2 through short lessons and adaptive review.</p>
-        </div>
-        <div id="levelTabs" class="level-tabs"></div>
-        <div id="unitGrid" class="unit-grid"></div>
-      </section>
-
-      <section id="view-review" class="view">
-        <div class="page-title">
-          <span class="eyebrow">MY WORDS</span>
-          <h1>Your personal vocabulary</h1>
-          <p>Every word you save comes back here for listening, practice and spaced review.</p>
-        </div>
-        <div class="review-toolbar">
-          <div class="filter-chips">
-            <button class="chip active" data-review-filter="due">Due now</button>
-            <button class="chip" data-review-filter="all">All saved</button>
-            <button class="chip" data-review-filter="hard">Weak words</button>
-          </div>
-          <div class="review-tools">
-            <button id="exportBtn" class="text-btn">Export</button>
-            <label class="text-btn file-label">Import<input id="importInput" type="file" accept="application/json" hidden></label>
+          <div class="tiny-progress">
+            <span id="courseProgressText">0 of 3 lessons</span>
+            <div class="progress-line"><i id="courseProgressBar" style="width:0%"></i></div>
           </div>
         </div>
-        <div id="reviewList" class="review-list"></div>
+        <div id="learningPath" class="learning-path"></div>
       </section>
 
-      <section id="view-games" class="view">
-        <div class="page-title">
-          <span class="eyebrow">PRACTICE HUB</span>
-          <h1>Train what is weak</h1>
-          <p>Practice rounds are built from your saved and difficult vocabulary.</p>
-        </div>
-        <div id="gameCards" class="game-grid"></div>
-        <section id="gameStage" class="challenge-card hidden"></section>
-      </section>
+      <button id="openCoachBtnMobile" class="coach-fab"><span>AI</span><b><span class="ar-label">المدرب الذكي</span><span class="en-label">AI Coach</span></b><small id="coachTip">Your plan adapts to your weak skills.</small></button>
 
-      <section id="view-progress" class="view">
-        <div class="page-title">
-          <span class="eyebrow">AI ANALYSIS</span>
-          <h1>Your learning profile</h1>
-          <p>The analysis updates from your quiz results, speaking attempts, word taps and review performance.</p>
-        </div>
-
-        <section class="analysis-hero">
-          <div class="analysis-level">
-            <span>Current estimate</span>
-            <strong id="progressLevel">A2</strong>
-            <small id="levelReason">Based on recent activity.</small>
-          </div>
-          <div class="analysis-focus">
-            <span class="focus-dot">AI</span>
-            <div><small>Focus next</small><strong id="aiWeakSkill">Listening</strong><p id="aiReason">More practice will be recommended here.</p></div>
-          </div>
-        </section>
-
-        <section class="progress-panel">
-          <div class="panel-title"><h3>Skills</h3><span id="aiConfidence">Adaptive estimate</span></div>
-          <div id="progressSkills"></div>
-        </section>
-
-        <section class="progress-grid">
-          <div class="progress-panel"><div class="panel-title"><h3>Weak words</h3><span>From your activity</span></div><div id="weakWordsPanel" class="weak-word-list"></div></div>
-          <div class="progress-panel"><div class="panel-title"><h3>Activity</h3><span>All time</span></div><div id="activityStats" class="stat-list"></div></div>
-        </section>
-
-        <section class="progress-panel"><div class="panel-title"><h3>CEFR journey</h3><span>A1 → C2</span></div><div id="levelJourney" class="journey"></div></section>
-      </section>
-
-      <section id="view-lesson" class="view lesson-view">
-        <header class="lesson-header">
-          <button class="lesson-close" data-nav="home">×</button>
-          <div class="lesson-progress-track"><i id="lessonOverallProgress" style="width:14%"></i></div>
-          <span id="lessonStepCount">1 / 7</span>
-        </header>
-
-        <div class="lesson-title-row">
-          <div>
-            <span id="lessonLevelBadge" class="lesson-level">A2</span>
-            <span id="lessonStepName" class="eyebrow">LISTEN</span>
-            <h1 id="lessonStageTitle">Listen first</h1>
-            <p id="lessonStageSubtitle">Start with a real human recording.</p>
-          </div>
-          <strong id="lessonTitle" class="lesson-topic">Lesson</strong>
-        </div>
-
-        <section class="lesson-section active-step" id="step-listen">
-          <div class="lesson-scene" id="lessonVisual"><div class="scene-caption" id="lessonSubtitle"></div></div>
-          <div class="challenge-card">
-            <div class="challenge-head">
-              <div><span class="human-badge">REAL HUMAN AUDIO</span><h3>Choose a speaker</h3></div>
-              <button id="findHumanAudioBtn" class="secondary-btn">Find voices</button>
-            </div>
-            <div id="audioAccentTabs" class="accent-tabs">
-              <button class="chip active" data-accent-filter="all">All</button>
-              <button class="chip" data-accent-filter="US">US</button>
-              <button class="chip" data-accent-filter="UK">UK</button>
-              <button class="chip" data-accent-filter="Other">Other</button>
-            </div>
-            <div id="humanAudioList" class="audio-list"><div class="empty-state small">Searching for a real human recording…</div></div>
-            <div class="audio-controls-row">
-              <label>Repeat <select id="humanRepeat"><option>1</option><option>3</option><option>5</option><option>10</option></select></label>
-              <label>Speed <select id="humanSpeed"><option value="0.7">0.7×</option><option value="0.85">0.85×</option><option value="1" selected>1×</option><option value="1.15">1.15×</option></select></label>
-            </div>
-          </div>
-        </section>
-
-        <section class="lesson-section" id="step-reading">
-          <div class="challenge-card">
-            <div class="reading-toolbar">
-              <button id="toggleTranslationBtn" class="small-btn">Show Arabic</button>
-              <button id="readingFocusBtn" class="small-btn">Focus</button>
-              <span id="readingTimer">00:00</span>
-            </div>
-            <div id="passageText" class="passage"></div>
-            <div id="passageArabic" class="arabic-translation hidden" dir="rtl"></div>
-            <div class="tap-hint">Tap any English word to hear it, save it, repeat it, or practise it later.</div>
-          </div>
-        </section>
-
-        <section class="lesson-section" id="step-shadow">
-          <div class="challenge-card">
-            <div id="shadowSentence" class="shadow-sentence"></div>
-            <div class="shadow-controls">
-              <button id="playShadowBtn" class="secondary-btn">▶ Human model</button>
-              <button id="recordShadowBtn" class="primary-btn">🎙 Record me</button>
-              <button id="stopShadowBtn" class="text-btn">Stop</button>
-            </div>
-            <div id="shadowResult" class="mini-result">Your result will appear here.</div>
-          </div>
-        </section>
-
-        <section class="lesson-section" id="step-vocab"><div id="vocabGrid" class="vocab-grid"></div></section>
-        <section class="lesson-section" id="step-grammar"><div class="practice-grid"><div id="grammarCard" class="challenge-card"></div><div id="sentenceBuilder" class="challenge-card"></div></div></section>
-        <section class="lesson-section" id="step-check"><div id="quizCard" class="challenge-card"></div></section>
-        <section class="lesson-section" id="step-speakwrite">
-          <div class="practice-grid">
-            <div class="challenge-card"><h3>Speak</h3><div id="speakingPrompts"></div><button id="practiceSpeakingBtn" class="primary-btn">🎙 Speak answer</button><div id="speakingResult" class="mini-result"></div></div>
-            <div class="challenge-card"><h3>Write</h3><p id="writingPrompt"></p><textarea id="writingInput" rows="7" placeholder="Write here..."></textarea><button id="checkWritingBtn" class="secondary-btn">Check writing</button><div id="writingFeedback" class="mini-result"></div></div>
-          </div>
-        </section>
-
-        <footer class="lesson-footer">
-          <button id="lessonPrevBtn" class="secondary-btn">Back</button>
-          <button id="lessonNextBtn" class="check-btn">CONTINUE</button>
-          <button id="completeLessonBtn" class="check-btn hidden">FINISH LESSON</button>
-        </footer>
-      </section>
-    </main>
-
-    <aside class="right-rail" id="rightRail">
-      <div class="right-stats">
-        <span>🔥 <b id="streakValueDesktop">0</b></span>
-        <span>⚡ <b id="xpValueDesktop">0</b></span>
+      <div class="hidden-controls">
+        <span id="xpValue">0</span><span id="streakValue">0</span>
+        <button id="openCoachBtn"></button><button id="quickSpeakingDesktop"></button>
+        <span id="xpValueDesktop">0</span><span id="streakValueDesktop">0</span><span id="dueValueDesktop">0</span>
+        <span id="aiWeakSkillDesktop"></span><span id="coachTipDesktop"></span>
       </div>
-      <section class="side-card ai-focus-card">
-        <div class="side-card-head"><span class="focus-dot">AI</span><b>Today’s focus</b></div>
-        <strong id="aiWeakSkillDesktop">Listening</strong>
-        <p id="coachTipDesktop">Your adaptive plan updates from your study behaviour.</p>
-        <button id="openCoachBtn" class="side-card-action">Ask coach</button>
-      </section>
-      <section class="side-card">
-        <div class="side-card-head"><span>◆</span><b>My Words</b></div>
-        <strong><span id="dueValueDesktop">0</span> due now</strong>
-        <p>Saved vocabulary returns when it needs another review.</p>
-        <button class="side-card-action" data-nav="review">Review words</button>
-      </section>
-      <section class="side-card">
-        <div class="side-card-head"><span>◉</span><b>Speaking</b></div>
-        <strong>Human shadowing</strong>
-        <p>Copy real speakers and compare what your microphone recognises.</p>
-        <button class="side-card-action" id="quickSpeakingDesktop">Start practice</button>
-      </section>
-    </aside>
-  </div>
+    </section>
 
-  <nav class="bottom-nav">
-    <button class="nav-item active" data-nav="home"><span>⌂</span><small>Learn</small></button>
-    <button class="nav-item" data-nav="review"><span>◆</span><small>Words</small><i id="reviewBadge" class="mini-badge hidden">0</i></button>
-    <button class="nav-item" data-nav="games"><span>✦</span><small>Practice</small></button>
-    <button class="nav-item" data-nav="progress"><span>◔</span><small>Progress</small></button>
+    <section id="view-learn" class="view">
+      <div class="page-head">
+        <span class="eyebrow">LESSONS</span>
+        <h1><span class="ar-label">الدروس</span><span class="en-label">Lessons</span></h1>
+        <p><span class="ar-label">اختر وحدتك التالية</span><span class="en-label">Choose your next unit</span></p>
+      </div>
+      <div id="levelTabs" class="level-tabs"></div>
+      <div id="unitGrid" class="lesson-list"></div>
+    </section>
+
+    <section id="view-review" class="view">
+      <div class="page-head">
+        <span class="eyebrow">MY WORDS</span>
+        <h1><span class="ar-label">كلماتي</span><span class="en-label">My Words</span></h1>
+        <p><span class="ar-label">الكلمات التي حفظتها تعود لك في وقت المراجعة المناسب.</span><span class="en-label">Saved words return when it is time to review them.</span></p>
+      </div>
+      <div class="review-toolbar">
+        <div class="filter-chips">
+          <button class="chip active" data-review-filter="due"><span class="ar-label">اليوم</span><span class="en-label">Due now</span></button>
+          <button class="chip" data-review-filter="all"><span class="ar-label">الكل</span><span class="en-label">All</span></button>
+          <button class="chip" data-review-filter="hard"><span class="ar-label">الصعبة</span><span class="en-label">Weak</span></button>
+        </div>
+        <div class="review-tools"><button id="exportBtn" class="text-btn">Export</button><label class="text-btn">Import<input id="importInput" type="file" accept="application/json" hidden></label></div>
+      </div>
+      <div id="reviewList" class="review-list"></div>
+    </section>
+
+    <section id="view-games" class="view">
+      <div class="page-head">
+        <span class="eyebrow">PRACTICE</span>
+        <h1><span class="ar-label">التدريب</span><span class="en-label">Practice</span></h1>
+        <p><span class="ar-label">تمارين قصيرة مبنية على الكلمات التي تحتاجها.</span><span class="en-label">Short practice built from what you need.</span></p>
+      </div>
+      <div id="gameCards" class="game-grid"></div>
+      <section id="gameStage" class="card hidden"></section>
+    </section>
+
+    <section id="view-progress" class="view">
+      <div class="page-head">
+        <span class="eyebrow">PROGRESS</span>
+        <h1><span class="ar-label">تقدمك</span><span class="en-label">Your progress</span></h1>
+        <p><span class="ar-label">رحلتك في أرقام بسيطة وواضحة.</span><span class="en-label">Your journey in simple, clear numbers.</span></p>
+      </div>
+
+      <section class="progress-overview">
+        <div class="progress-ring-card">
+          <div class="ring-wrap"><div class="ring"><strong id="progressLevel">A2</strong></div></div>
+          <div><small><span class="ar-label">مستواك الحالي</span><span class="en-label">Current estimate</span></small><p id="levelReason">Based on your recent study.</p></div>
+        </div>
+        <div class="ai-progress-card">
+          <span class="ai-mark">AI</span>
+          <div><small><span class="ar-label">يحتاج تركيز أكثر</span><span class="en-label">Focus next</span></small><strong id="aiWeakSkill">Listening</strong><p id="aiReason">More practice will be recommended here.</p></div>
+        </div>
+      </section>
+
+      <section class="progress-card">
+        <div class="card-head"><h3><span class="ar-label">المهارات</span><span class="en-label">Skills</span></h3><span id="aiConfidence">Adaptive estimate</span></div>
+        <div id="progressSkills"></div>
+      </section>
+
+      <section class="progress-two">
+        <div class="progress-card"><div class="card-head"><h3><span class="ar-label">الكلمات الضعيفة</span><span class="en-label">Weak words</span></h3></div><div id="weakWordsPanel" class="weak-word-list"></div></div>
+        <div class="progress-card"><div class="card-head"><h3><span class="ar-label">النشاط</span><span class="en-label">Activity</span></h3></div><div id="activityStats" class="stat-list"></div></div>
+      </section>
+
+      <section class="progress-card"><div class="card-head"><h3>CEFR</h3></div><div id="levelJourney" class="journey"></div></section>
+    </section>
+
+    <section id="view-lesson" class="view lesson-view">
+      <header class="lesson-top">
+        <button class="lesson-close" data-nav="learn">←</button>
+        <div class="lesson-progress-track"><i id="lessonOverallProgress" style="width:14%"></i></div>
+        <span id="lessonStepCount">1/7</span>
+      </header>
+
+      <div class="lesson-heading">
+        <span id="lessonLevelBadge" class="lesson-level">A2</span>
+        <span id="lessonStepName" class="eyebrow">LISTEN</span>
+        <h1 id="lessonStageTitle">Listen and learn</h1>
+        <p id="lessonStageSubtitle">Listen to the phrase and repeat it.</p>
+        <strong id="lessonTitle" class="lesson-topic">Lesson</strong>
+      </div>
+
+      <section class="lesson-section active-step" id="step-listen">
+        <div class="lesson-photo" id="lessonVisual"><div id="lessonSubtitle" class="photo-caption"></div></div>
+        <div class="human-audio-card">
+          <div class="human-audio-head">
+            <div><span class="human-badge">REAL HUMAN AUDIO</span><h3><span class="ar-label">اختر المتحدث</span><span class="en-label">Choose a speaker</span></h3></div>
+            <button id="findHumanAudioBtn" class="ghost-btn"><span class="ar-label">تحديث الأصوات</span><span class="en-label">Find voices</span></button>
+          </div>
+          <div id="audioAccentTabs" class="accent-tabs">
+            <button class="chip active" data-accent-filter="all">All</button><button class="chip" data-accent-filter="US">US</button><button class="chip" data-accent-filter="UK">UK</button><button class="chip" data-accent-filter="Other">Other</button>
+          </div>
+          <div id="humanAudioList" class="audio-list"><div class="empty-state small">Searching for a real human recording…</div></div>
+          <div class="audio-controls-row">
+            <label>Repeat <select id="humanRepeat"><option>1</option><option>3</option><option>5</option><option>10</option></select></label>
+            <label>Speed <select id="humanSpeed"><option value="0.7">0.7×</option><option value="0.85">0.85×</option><option value="1" selected>1×</option><option value="1.15">1.15×</option></select></label>
+          </div>
+        </div>
+      </section>
+
+      <section class="lesson-section" id="step-reading">
+        <div class="lesson-card">
+          <div class="reading-toolbar"><button id="toggleTranslationBtn" class="small-btn">العربية</button><button id="readingFocusBtn" class="small-btn">Focus</button><span id="readingTimer">00:00</span></div>
+          <div id="passageText" class="passage"></div>
+          <div id="passageArabic" class="arabic-translation hidden" dir="rtl"></div>
+          <p class="tap-hint"><span class="ar-label">اضغط أي كلمة لسماعها وحفظها وتكرارها.</span><span class="en-label">Tap any word to hear, save and repeat it.</span></p>
+        </div>
+      </section>
+
+      <section class="lesson-section" id="step-shadow">
+        <div class="lesson-card">
+          <div id="shadowSentence" class="shadow-sentence"></div>
+          <div class="shadow-controls"><button id="playShadowBtn" class="ghost-btn">▶ Human</button><button id="recordShadowBtn" class="primary-btn">🎙 Record</button><button id="stopShadowBtn" class="text-btn">Stop</button></div>
+          <div id="shadowResult" class="mini-result">Your result will appear here.</div>
+        </div>
+      </section>
+
+      <section class="lesson-section" id="step-vocab"><div id="vocabGrid" class="vocab-grid"></div></section>
+      <section class="lesson-section" id="step-grammar"><div class="two-col"><div id="grammarCard" class="lesson-card"></div><div id="sentenceBuilder" class="lesson-card"></div></div></section>
+      <section class="lesson-section" id="step-check"><div id="quizCard" class="lesson-card"></div></section>
+      <section class="lesson-section" id="step-speakwrite"><div class="two-col"><div class="lesson-card"><h3>Speaking</h3><div id="speakingPrompts"></div><button id="practiceSpeakingBtn" class="primary-btn">🎙 Speak</button><div id="speakingResult" class="mini-result"></div></div><div class="lesson-card"><h3>Writing</h3><p id="writingPrompt"></p><textarea id="writingInput" rows="6" placeholder="Write here..."></textarea><button id="checkWritingBtn" class="ghost-btn">Check</button><div id="writingFeedback" class="mini-result"></div></div></div></section>
+
+      <footer class="lesson-footer"><button id="lessonPrevBtn" class="ghost-btn">Back</button><button id="lessonNextBtn" class="primary-btn">Next ←</button><button id="completeLessonBtn" class="primary-btn hidden">Finish ✓</button></footer>
+    </section>
+  </main>
+
+  <nav class="mobile-nav">
+    <button class="nav-item active" data-nav="home"><span>⌂</span><small><span class="ar-label">الرئيسية</span><span class="en-label">Home</span></small></button>
+    <button class="nav-item" data-nav="learn"><span>▦</span><small><span class="ar-label">الدروس</span><span class="en-label">Lessons</span></small></button>
+    <button class="nav-item" data-nav="review"><span>◆</span><small><span class="ar-label">كلماتي</span><span class="en-label">Words</span></small><i id="reviewBadge" class="mini-badge hidden">0</i></button>
+    <button class="nav-item" data-nav="progress"><span>◔</span><small><span class="ar-label">التقدم</span><span class="en-label">Progress</span></small></button>
   </nav>
+  <i id="reviewBadgeDesktop" class="hidden">0</i>
 
   <dialog id="wordDialog" class="word-sheet">
-    <div class="sheet-handle"></div>
     <button class="dialog-close" data-close-dialog="wordDialog">×</button>
-    <header class="word-sheet-head">
-      <div>
-        <span id="wordType" class="eyebrow">WORD</span>
-        <h2 id="wordTitle">word</h2>
-        <p id="wordIpa"></p>
-      </div>
-      <button id="wordKnowBtn" class="mastered-btn">I know this</button>
-    </header>
-
+    <header class="word-sheet-head"><div><span id="wordType" class="eyebrow">WORD</span><h2 id="wordTitle">word</h2><p id="wordIpa"></p></div><button id="wordKnowBtn" class="ghost-btn">I know this</button></header>
     <div id="wordMeaning" class="meaning-card" dir="rtl">...</div>
     <div id="wordExample" class="example-card"></div>
-
     <section class="word-audio-section">
-      <div class="word-section-head">
-        <div><span class="human-badge">REAL HUMAN AUDIO</span><h3>Listen again</h3></div>
-        <button id="wordAudioRefresh" class="small-btn">Refresh</button>
-      </div>
-      <div id="wordAccentTabs" class="accent-tabs">
-        <button class="chip active" data-word-accent="all">All</button>
-        <button class="chip" data-word-accent="US">US</button>
-        <button class="chip" data-word-accent="UK">UK</button>
-        <button class="chip" data-word-accent="Other">Other</button>
-      </div>
-      <div class="word-audio-controls">
-        <label>Repeat <select id="wordRepeat"><option>1</option><option>3</option><option>5</option><option>10</option></select></label>
-        <label>Speed <select id="wordSpeed"><option value="0.7">0.7×</option><option value="0.85">0.85×</option><option value="1" selected>1×</option><option value="1.15">1.15×</option></select></label>
-      </div>
+      <div class="human-audio-head"><div><span class="human-badge">REAL HUMAN AUDIO</span><h3><span class="ar-label">اسمع الكلمة</span><span class="en-label">Hear the word</span></h3></div><button id="wordAudioRefresh" class="small-btn">Refresh</button></div>
+      <div id="wordAccentTabs" class="accent-tabs"><button class="chip active" data-word-accent="all">All</button><button class="chip" data-word-accent="US">US</button><button class="chip" data-word-accent="UK">UK</button><button class="chip" data-word-accent="Other">Other</button></div>
+      <div class="audio-controls-row"><label>Repeat <select id="wordRepeat"><option>1</option><option>3</option><option>5</option><option>10</option></select></label><label>Speed <select id="wordSpeed"><option value="0.7">0.7×</option><option value="0.85">0.85×</option><option value="1" selected>1×</option><option value="1.15">1.15×</option></select></label></div>
       <div id="wordAudioList" class="audio-list"></div>
     </section>
-
-    <div class="word-main-actions">
-      <button id="addReviewBtn" class="primary-btn">◆ Save to My Words</button>
-      <button id="openReminderBtn" class="secondary-btn">⏰ Remind me</button>
-      <button id="wordPracticeBtn" class="secondary-btn">✦ Practise this word</button>
-    </div>
-
-    <div id="reminderOptions" class="reminder-options hidden">
-      <button data-reminder="10m">10 min</button><button data-reminder="1h">1 hour</button><button data-reminder="1d">Tomorrow</button><button data-reminder="3d">3 days</button><button data-reminder="7d">1 week</button><button id="calendarReminderBtn">Calendar</button>
-    </div>
-
-    <section id="wordPracticeBox" class="word-practice-box hidden">
-      <h3>Use “<span id="wordPracticeLabel"></span>” in a sentence</h3>
-      <input id="wordPracticeInput" placeholder="Write your sentence here..." />
-      <button id="wordPracticeCheck" class="check-btn">CHECK</button>
-      <div id="wordPracticeFeedback" class="mini-result hidden"></div>
-    </section>
+    <div class="word-actions"><button id="addReviewBtn" class="primary-btn">◆ Save</button><button id="openReminderBtn" class="ghost-btn">⏰ Reminder</button><button id="wordPracticeBtn" class="ghost-btn">✦ Practice</button></div>
+    <div id="reminderOptions" class="reminder-options hidden"><button data-reminder="10m">10 min</button><button data-reminder="1h">1 hour</button><button data-reminder="1d">Tomorrow</button><button data-reminder="3d">3 days</button><button data-reminder="7d">1 week</button><button id="calendarReminderBtn">Calendar</button></div>
+    <section id="wordPracticeBox" class="word-practice-box hidden"><h3>Use “<span id="wordPracticeLabel"></span>” in a sentence</h3><input id="wordPracticeInput" placeholder="Write your sentence here..." /><button id="wordPracticeCheck" class="primary-btn">Check</button><div id="wordPracticeFeedback" class="mini-result hidden"></div></section>
   </dialog>
 
-  <dialog id="coachDialog" class="coach-dialog">
-    <button class="dialog-close" data-close-dialog="coachDialog">×</button>
-    <div class="coach-head"><span class="focus-dot">AI</span><div><strong>Adaptive Coach</strong><small id="coachDialogMode">Local adaptive analysis</small></div></div>
-    <div id="coachMessages" class="coach-messages"><div class="coach-bubble bot">I use your current level, weak skills and saved words to suggest what to practise next.</div></div>
-    <div class="coach-input-row"><input id="coachInput" placeholder="Ask about your English..."/><button id="coachSendBtn" class="primary-btn">Send</button></div>
-  </dialog>
+  <dialog id="coachDialog" class="coach-dialog"><button class="dialog-close" data-close-dialog="coachDialog">×</button><div class="coach-head"><span class="ai-mark">AI</span><div><strong>Adaptive Coach</strong><small id="coachDialogMode">Local adaptive analysis</small></div></div><div id="coachMessages" class="coach-messages"><div class="coach-bubble bot">I use your current level, weak skills and saved words to suggest what to practise next.</div></div><div class="coach-input-row"><input id="coachInput" placeholder="Ask about your English..."/><button id="coachSendBtn" class="primary-btn">Send</button></div></dialog>
 
-  <dialog id="placementDialog" class="coach-dialog">
-    <button class="dialog-close" data-close-dialog="placementDialog">×</button>
-    <span class="eyebrow">LEVEL CHECK</span><h2>Find your starting point</h2><p>This is an adaptive estimate, not an official CEFR exam.</p><div id="placementStage"></div>
-  </dialog>
+  <dialog id="placementDialog" class="coach-dialog"><button class="dialog-close" data-close-dialog="placementDialog">×</button><span class="eyebrow">LEVEL CHECK</span><h2>Find your starting point</h2><p>This is an adaptive estimate, not an official CEFR exam.</p><div id="placementStage"></div></dialog>
 
   <script src="data-base.js"></script><script src="units-a.js"></script><script src="units-b.js"></script><script src="units-c.js"></script><script src="data-state.js"></script>
   <script src="core-a.js"></script><script src="core-b.js"></script><script src="study-a.js"></script><script src="study-b.js"></script><script src="main-a.js"></script><script src="main-b.js"></script>
