@@ -297,8 +297,22 @@ function commonsPageToAudioItem(p,raw,groupHint="",trustedFromEntry=false){
   const exactTitle=exactWordMatchesTitle(raw,p.title||"");
   const exactDescription=norm&&new RegExp(`(^|[^a-z])${norm}([^a-z]|$)`,"i").test(desc);
   if(!trustedFromEntry&&!exactTitle&&!exactDescription)return null;
-  const artistRaw=meta.AttributionName?.value||meta.Artist?.value||meta.Credit?.value||"";
-  const label=cleanSpeakerName(artistRaw);if(!label)return null;
+  const descFull=`${stripHtml(meta.ImageDescription?.value||"")} ${stripHtml(meta.Description?.value||"")} ${stripHtml(meta.Credit?.value||"")}`;
+  const inferredSpeaker=(()=>{
+    const patterns=[
+      /recorded by\s+([^.,;\n]+)/i,
+      /speaker(?: from [^.,;]+)?(?: is|:)\s*([^.,;\n]+)/i,
+      /author(?: is|:)\s*([^.,;\n]+)/i,
+      /by\s+([A-Z][A-Za-z0-9 _.'-]{2,40})(?:\.|,|$)/
+    ];
+    for(const re of patterns){
+      const m=descFull.match(re);
+      if(m?.[1])return m[1].trim()
+    }
+    return ""
+  })();
+  const artistRaw=meta.AttributionName?.value||meta.Artist?.value||meta.Credit?.value||inferredSpeaker||"";
+  const label=cleanSpeakerName(artistRaw)||cleanSpeakerName(inferredSpeaker)||"Human speaker";
   const group=groupHint||commonsGroupFromBlob(blob);if(!group)return null;
   const rule=curatedSpeakerRule(artistRaw);
   const license=stripHtml(meta.LicenseShortName?.value||meta.UsageTerms?.value||"");
@@ -370,17 +384,27 @@ async function fetchWiktionaryAudio(raw){
 async function fetchExactCommonsAudio(raw){
   const safe=String(raw||"").trim();
   if(!safe||safe.length>60)return [];
-  const titles=[
-    `File:En-uk-${safe}.ogg`,`File:En-uk-${safe}-1.ogg`,`File:En-uk-${safe}-2.ogg`,
-    `File:En-gb-${safe}.ogg`,
-    `File:En-us-${safe}.ogg`,`File:En-us-${safe}-1.ogg`,`File:En-us-${safe}-2.ogg`,
-    `File:En-za-${safe}.ogg`
-  ];
+  const titles=[];
+  const prefixes=["En-uk-","En-gb-","En-us-","En-za-"];
+  for(const prefix of prefixes){
+    titles.push(`File:${prefix}${safe}.ogg`);
+    for(let i=1;i<=12;i++)titles.push(`File:${prefix}${safe}-${i}.ogg`)
+  }
   try{
-    const url=`https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent(titles.join("|"))}&prop=videoinfo&viprop=url%7Cderivatives%7Cextmetadata&format=json&origin=*`;
-    const r=await fetch(url,{mode:"cors",cache:"no-store"});if(!r.ok)return [];
-    const j=await r.json();
-    return Object.values(j.query?.pages||{}).map(p=>commonsPageToAudioItem(p,safe)).filter(Boolean)
+    const all=[];
+    for(let i=0;i<titles.length;i+=20){
+      const batch=titles.slice(i,i+20);
+      const url=`https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent(batch.join("|"))}&prop=videoinfo&viprop=url%7Cderivatives%7Cextmetadata&format=json&origin=*`;
+      const r=await fetch(url,{mode:"cors",cache:"no-store"});if(!r.ok)continue;
+      const j=await r.json();
+      for(const p of Object.values(j.query?.pages||{})){
+        if(!p?.title||p.missing!==undefined)continue;
+        const group=/en[- _]?za/i.test(p.title)?"ZA":/en[- _]?(uk|gb)/i.test(p.title)?"UK":/en[- _]?us/i.test(p.title)?"US":"";
+        const item=commonsPageToAudioItem(p,safe,group,true);
+        if(item)all.push(item)
+      }
+    }
+    return dedupeAudio(all)
   }catch{return []}
 }
 async function fetchCommonsAudio(word){
@@ -402,7 +426,12 @@ async function fetchCommonsAudio(word){
 
   const speakerConfig=(typeof VOICE_LIBRARY!=="undefined"?VOICE_LIBRARY.speakers:[])||[];
   const prefixes=[...new Set(speakerConfig.flatMap(s=>s.searchPrefixes||[]))];
-  const queries=[...prefixes.map(p=>`intitle:${p}${raw}`),...prefixes.map(p=>`intitle:${p}${raw}-`),`English pronunciation "${raw}"`];
+  const queries=[
+    ...prefixes.map(p=>`intitle:${p}${raw}`),
+    ...prefixes.map(p=>`intitle:${p}${raw}-`),
+    `intitle:"LL-Q1860 (eng)-" "${raw}"`,
+    `English pronunciation "${raw}"`
+  ];
 
   for(const q of queries){
     if(found.length>=12)break;
@@ -442,7 +471,7 @@ function buildVoiceProfiles(items){
   const pool=sortHumanAudio(items);
   const usedSpeakers={US:new Set(),UK:new Set(),ZA:new Set()};
   const pick=(group,style)=>{
-    const candidates=pool.filter(x=>x.group===group&&(x.style===style||x.style==="natural")&&cleanSpeakerName(x.label||""));
+    const candidates=pool.filter(x=>x.group===group&&(x.style===style||x.style==="natural"||style==="academic")&&cleanSpeakerName(x.label||""));
     const chosen=candidates.find(x=>!usedSpeakers[group].has(cleanSpeakerName(x.label).toLowerCase()))||null;
     if(chosen)usedSpeakers[group].add(cleanSpeakerName(chosen.label).toLowerCase());
     return chosen
