@@ -286,7 +286,7 @@ function exactWordMatchesTitle(raw,title=""){
   const stripped=String(title).replace(/^File:/i,"").replace(/\.(ogg|oga|wav|mp3|flac)$/i,"").toLowerCase().replace(/^en[- _]?(us|uk|gb|za)[- _]?/,"").replace(/[- _]?\d+$/,"").replace(/[^a-z]/g,"");
   return stripped===norm
 }
-function commonsPageToAudioItem(p,raw){
+function commonsPageToAudioItem(p,raw,groupHint="",trustedFromEntry=false){
   const info=p?.videoinfo?.[0];if(!info)return null;
   const playable=bestCommonsPlayable(info);if(!playable?.url)return null;
   const meta=info.extmetadata||{};
@@ -296,10 +296,10 @@ function commonsPageToAudioItem(p,raw){
   const desc=`${stripHtml(meta.ImageDescription?.value||"")} ${stripHtml(meta.Description?.value||"")}`.toLowerCase();
   const exactTitle=exactWordMatchesTitle(raw,p.title||"");
   const exactDescription=norm&&new RegExp(`(^|[^a-z])${norm}([^a-z]|$)`,"i").test(desc);
-  if(!exactTitle&&!exactDescription)return null;
+  if(!trustedFromEntry&&!exactTitle&&!exactDescription)return null;
   const artistRaw=meta.AttributionName?.value||meta.Artist?.value||meta.Credit?.value||"";
   const label=cleanSpeakerName(artistRaw);if(!label)return null;
-  const group=commonsGroupFromBlob(blob);if(!group)return null;
+  const group=groupHint||commonsGroupFromBlob(blob);if(!group)return null;
   const rule=curatedSpeakerRule(artistRaw);
   const license=stripHtml(meta.LicenseShortName?.value||meta.UsageTerms?.value||"");
   if(!license||/all rights reserved|no license/i.test(license))return null;
@@ -307,13 +307,65 @@ function commonsPageToAudioItem(p,raw){
   return {
     url:playable.url,sources:playable.sources,label,
     accent:group==="US"?"American":group==="UK"?"British":"South African",
-    group,style:rule?.style||"academic",voiceRole:rule?.role||null,
-    qualityTag:rule?.quality||(isShtooka?"Shtooka learning recording":"Verified human pronunciation"),
+    group,style:rule?.style||(trustedFromEntry?"natural":"academic"),voiceRole:rule?.role||null,
+    qualityTag:rule?.quality||(isShtooka?"Shtooka learning recording":trustedFromEntry?"Wiktionary human pronunciation":"Verified human pronunciation"),
     license,source:rule?.source||(isShtooka?"Shtooka / Wikimedia Commons":"Wikimedia Commons"),
     attributionUrl:`https://commons.wikimedia.org/wiki/${encodeURIComponent(String(p.title||"").replace(/ /g,"_"))}`,
     mime:playable.mime,bitrate:playable.bitrate,text:raw,
     speakerId:rule?.id||label.toLowerCase().replace(/[^a-z0-9]+/g,"-")
   }
+}
+function wiktionaryAccentFromContext(text="",fileTitle=""){
+  const t=(String(text)+" "+String(fileTitle)).toLowerCase();
+  if(/south africa|south african|en[- _]?za/.test(t))return "ZA";
+  if(/received pronunciation|southern england|british|\buk\b|en[- _]?(uk|gb)/.test(t))return "UK";
+  if(/general american|american|united states|\bus\b|en[- _]?us/.test(t))return "US";
+  return ""
+}
+async function fetchWiktionaryAudio(raw){
+  const safe=String(raw||"").trim();
+  if(!safe||safe.includes(" ")||safe.length>50)return [];
+  try{
+    const api=\`https://en.wiktionary.org/w/api.php?action=parse&page=\${encodeURIComponent(safe)}&prop=text&format=json&origin=*\`;
+    const r=await fetch(api,{mode:"cors",cache:"no-store"});
+    if(!r.ok)return [];
+    const j=await r.json();
+    const html=j.parse?.text?.["*"]||"";
+    if(!html)return [];
+    const doc=new DOMParser().parseFromString(html,"text/html");
+    const refs=[];const seen=new Set();
+
+    for(const a of doc.querySelectorAll('a[href*="/wiki/File:"],a[href*="/wiki/File%3A"]')){
+      const href=a.getAttribute("href")||"";
+      let title="";
+      try{
+        const decoded=decodeURIComponent(href);
+        const m=decoded.match(/\/wiki\/(File:[^#?]+)/i);
+        if(m)title=m[1].replace(/_/g," ")
+      }catch{}
+      if(!title||seen.has(title.toLowerCase()))continue;
+      const ctx=(a.closest("li,tr,dd,div")?.textContent||a.parentElement?.textContent||"").slice(0,500);
+      const group=wiktionaryAccentFromContext(ctx,title);
+      if(!group)continue;
+      seen.add(title.toLowerCase());
+      refs.push({title,group});
+      if(refs.length>=16)break
+    }
+    if(!refs.length)return [];
+
+    const url=\`https://commons.wikimedia.org/w/api.php?action=query&titles=\${encodeURIComponent(refs.map(x=>x.title).join("|"))}&prop=videoinfo&viprop=url%7Cderivatives%7Cextmetadata&format=json&origin=*\`;
+    const cr=await fetch(url,{mode:"cors",cache:"no-store"});
+    if(!cr.ok)return [];
+    const cj=await cr.json();
+    const hintMap=new Map(refs.map(x=>[x.title.toLowerCase(),x.group]));
+    const out=[];
+    for(const p of Object.values(cj.query?.pages||{})){
+      const hint=hintMap.get(String(p.title||"").toLowerCase())||"";
+      const item=commonsPageToAudioItem(p,safe,hint,true);
+      if(item)out.push({...item,source:item.source||"Wiktionary / Wikimedia Commons"})
+    }
+    return dedupeAudio(out)
+  }catch{return []}
 }
 async function fetchExactCommonsAudio(raw){
   const safe=String(raw||"").trim();
@@ -337,6 +389,12 @@ async function fetchCommonsAudio(word){
   if(cached?.length)return sortHumanAudio(cached);
 
   const found=[];const seen=new Set();
+
+  const wiktionary=await fetchWiktionaryAudio(raw);
+  for(const item of wiktionary){
+    if(item?.url&&!seen.has(item.url)){seen.add(item.url);found.push(item)}
+  }
+
   const direct=await fetchExactCommonsAudio(raw);
   for(const item of direct){
     if(item?.url&&!seen.has(item.url)){seen.add(item.url);found.push(item)}
@@ -384,7 +442,7 @@ function buildVoiceProfiles(items){
   const pool=sortHumanAudio(items);
   const usedSpeakers={US:new Set(),UK:new Set(),ZA:new Set()};
   const pick=(group,style)=>{
-    const candidates=pool.filter(x=>x.group===group&&x.style===style&&cleanSpeakerName(x.label||""));
+    const candidates=pool.filter(x=>x.group===group&&(x.style===style||x.style==="natural")&&cleanSpeakerName(x.label||""));
     const chosen=candidates.find(x=>!usedSpeakers[group].has(cleanSpeakerName(x.label).toLowerCase()))||null;
     if(chosen)usedSpeakers[group].add(cleanSpeakerName(chosen.label).toLowerCase());
     return chosen
@@ -446,7 +504,7 @@ function renderAudioItems(container,items,kind){
             <button class="audio-play" data-audio-url="${esc(a.url)}" aria-label="Play ${esc(speaker)}">▶</button>
             <div class="speaker-copy">
               <strong class="speaker-name">${esc(role)} · ${esc(speaker)}</strong>
-              <small class="speaker-accent">${esc(accentFullLabel(a.accent,a.group))} · ${a.style==="street"?(ar?"طبيعي يومي":"Conversational"):(ar?"واضح للتعلم":"Academic / clear")}</small>
+              <small class="speaker-accent">${esc(accentFullLabel(a.accent,a.group))} · ${(a.style==="street"||a.style==="natural")?(ar?"طبيعي يومي":"Conversational / natural"):(ar?"واضح للتعلم":"Academic / clear")}</small>
               <small class="speaker-quality">${esc(a.qualityTag||"Curated human recording")}</small>
               <small class="speaker-license">${esc(a.source||kind)} · ${esc(a.license||"Open license")}${a.attributionUrl?` · <a href="${esc(a.attributionUrl)}" target="_blank" rel="noopener">source</a>`:""}</small>
             </div>
