@@ -196,34 +196,49 @@ async function findHumanLessonAudio(silent=false){
   const list=document.getElementById("humanAudioList");
   list.innerHTML='<div class="empty-state small">Searching real human recordings…</div>';
   let found=[];
+
+  // Try exact human sentence/phrase recordings first.
   for(const text of sentenceCandidates()){
-    const commons=await fetchCommonsAudio(text,false);
+    const commons=await fetchCommonsAudio(text);
     found.push(...commons.map(x=>({...x,text})));
-    if(found.length>=14)break
+    if(found.length>=12)break
   }
+
   found=sortHumanAudio(dedupeAudio(found));
   if(found.length){
-    lessonHumanRecordings=found.slice(0,24);
-    currentHumanModel=lessonHumanRecordings.find(x=>x.style==="street"&&(x.group==="US"||x.group==="UK"))||lessonHumanRecordings[0]||null;
+    lessonHumanRecordings=found.slice(0,18);
+    currentHumanModel=lessonHumanRecordings.find(x=>x.group==="UK")||lessonHumanRecordings.find(x=>x.group==="US")||lessonHumanRecordings[0]||null;
     if(currentHumanModel?.text)document.getElementById("shadowSentence").textContent=currentHumanModel.text;
     renderAudioItems(list,lessonHumanRecordings,"human");
     applyAudioAccentFilter("all","humanAudioList");
-    if(!silent)toast(state.settings.lang==="ar"?"تم تحديث مكتبة الأصوات البشرية":"Human voice library updated");
+    if(!silent)toast(state.settings.lang==="ar"?"تم العثور على تسجيلات بشرية":"Human recordings are ready");
     return lessonHumanRecordings;
   }
-  const keyword=currentUnit.vocab[0]?.[0];
-  const commons=keyword?await fetchCommonsAudio(keyword,true):[];
-  if(commons.length){
-    lessonHumanRecordings=sortHumanAudio(commons.map(x=>({...x,text:keyword})));
+
+  // If a whole-sentence recording does not exist, search every vocabulary word,
+  // not only the first word. This makes the human-audio section useful on every lesson.
+  let fallback=[];
+  for(const entry of (currentUnit.vocab||[])){
+    const word=entry?.[0];if(!word)continue;
+    const recordings=await fetchCommonsAudio(word);
+    if(recordings.length)fallback.push(...recordings.map(x=>({...x,text:word})));
+    if(fallback.length>=16)break
+  }
+
+  fallback=sortHumanAudio(dedupeAudio(fallback));
+  if(fallback.length){
+    lessonHumanRecordings=fallback.slice(0,18);
     currentHumanModel=null;
-    list.innerHTML='<div class="empty-state small">No exact sentence recording was found. Available human pronunciation profiles are shown below.</div><div id="lessonWordAudio"></div>';
+    list.innerHTML=`<div class="empty-state small">${state.settings.lang==="ar"?"لا يوجد تسجيل بشري مطابق للجملة كاملة. هذه تسجيلات بشرية حقيقية لكلمات الدرس.":"No exact human recording exists for the full sentence. These are real human recordings for words in this lesson."}</div><div id="lessonWordAudio"></div>`;
     renderAudioItems(document.getElementById("lessonWordAudio"),lessonHumanRecordings,"human");
-    if(!silent)toast(state.settings.lang==="ar"?"لا يوجد تسجيل مطابق للجملة، تم عرض نطق بشري للكلمة":"No exact sentence recording; human word pronunciations are shown");
+    applyAudioAccentFilter("all","lessonWordAudio");
+    if(!silent)toast(state.settings.lang==="ar"?"تم تحميل أصوات بشرية لكلمات الدرس":"Human word audio is ready");
     return lessonHumanRecordings;
   }
+
   lessonHumanRecordings=[];currentHumanModel=null;
-  list.innerHTML='<div class="empty-state small">No matching reusable human recording was found. AI speech will not be used.</div>';
-  if(!silent)toast(state.settings.lang==="ar"?"لا يوجد تسجيل بشري مطابق حاليًا":"No matching human recording found");
+  list.innerHTML=`<div class="empty-state small">${state.settings.lang==="ar"?"لم نجد تسجيلًا بشريًا صالحًا لهذا الدرس بعد. لن نستخدم صوت ذكاء اصطناعي بدلًا منه.":"No usable human recording was found for this lesson. AI speech will not be used as a substitute."}</div>`;
+  if(!silent)toast(state.settings.lang==="ar"?"لا يوجد تسجيل بشري صالح حاليًا":"No usable human recording found");
   return [];
 }
 async function playShadowHuman(){
