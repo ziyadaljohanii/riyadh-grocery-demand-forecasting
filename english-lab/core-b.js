@@ -470,18 +470,43 @@ function dedupeAudio(items){
 function buildVoiceProfiles(items){
   const pool=sortHumanAudio(items);
   const usedSpeakers={US:new Set(),UK:new Set(),ZA:new Set()};
+  const usedUrls=new Set();
+
+  const candidatesFor=(group,style)=>pool.filter(x=>
+    x.group===group &&
+    (x.style===style||x.style==="natural"||style==="academic") &&
+    cleanSpeakerName(x.label||"") &&
+    x.url &&
+    !usedUrls.has(x.url)
+  );
+
   const pick=(group,style)=>{
-    const candidates=pool.filter(x=>x.group===group&&(x.style===style||x.style==="natural"||style==="academic")&&cleanSpeakerName(x.label||""));
-    const chosen=candidates.find(x=>!usedSpeakers[group].has(cleanSpeakerName(x.label).toLowerCase()))||null;
-    if(chosen)usedSpeakers[group].add(cleanSpeakerName(chosen.label).toLowerCase());
+    const candidates=candidatesFor(group,style);
+    let chosen=candidates.find(x=>!usedSpeakers[group].has(cleanSpeakerName(x.label).toLowerCase()))||null;
+    if(!chosen)chosen=candidates[0]||null;
+    if(chosen){
+      usedSpeakers[group].add(cleanSpeakerName(chosen.label).toLowerCase());
+      usedUrls.add(chosen.url)
+    }
     return chosen
   };
-  const byRole=(role)=>pool.find(x=>x.voiceRole===role&&!usedSpeakers[x.group]?.has(cleanSpeakerName(x.label).toLowerCase()))||null;
+
+  const byRole=(role)=>pool.find(x=>
+    x.voiceRole===role &&
+    x.url &&
+    !usedUrls.has(x.url)
+  )||null;
+
   const takeRole=(role,group,style)=>{
     const exact=byRole(role);
-    if(exact){usedSpeakers[group].add(cleanSpeakerName(exact.label).toLowerCase());return exact}
+    if(exact){
+      usedSpeakers[group].add(cleanSpeakerName(exact.label).toLowerCase());
+      usedUrls.add(exact.url);
+      return exact
+    }
     return pick(group,style)
   };
+
   return [
     {group:"US",style:"street",slot:"American Street",ar:"أمريكي شوارع",item:takeRole("American Street","US","street")},
     {group:"US",style:"academic",slot:"American Academic 1",ar:"أمريكي أكاديمي 1",item:takeRole("American Academic 1","US","academic")},
