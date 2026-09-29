@@ -247,92 +247,104 @@ function bestCommonsPlayable(info){
     const src=String(d.src||d.url||"").toLowerCase();
     return type.includes("audio/mpeg")||key.includes("mp3")||src.includes(".mp3")
   }).sort((a,b)=>(+(b.bitrate||0))-(+(a.bitrate||0)));
-  if(mp3s.length){
-    const m=mp3s[0];
-    return {url:m.src||m.url,mime:"audio/mpeg",bitrate:+(m.bitrate||0)||null}
-  }
   const source=info?.url||"";
-  if(/\.mp3(\?|$)/i.test(source))return {url:source,mime:"audio/mpeg",bitrate:null};
-  if(/\.wav(\?|$)/i.test(source))return {url:source,mime:"audio/wav",bitrate:null};
-  const probe=document.createElement("audio");
-  if(/\.(ogg|oga)(\?|$)/i.test(source)&&probe.canPlayType("audio/ogg"))return {url:source,mime:"audio/ogg",bitrate:null};
-  return null
+  const sources=[];
+  for(const d of mp3s){
+    const u=d.src||d.url;
+    if(u&&!sources.includes(u))sources.push(u)
+  }
+  if(source&&!sources.includes(source))sources.push(source);
+  if(!sources.length)return null;
+  const first=sources[0];
+  return {url:first,sources,mime:/\.mp3(\?|$)/i.test(first)?"audio/mpeg":/\.wav(\?|$)/i.test(first)?"audio/wav":"audio/ogg",bitrate:mp3s[0]?+(mp3s[0].bitrate||0)||null:null}
+}
+function commonsGroupFromBlob(blob=""){
+  const b=String(blob).toLowerCase();
+  if(/en[- _]?za|south africa|south african/.test(b))return "ZA";
+  if(/en[- _]?(us)|american|united states/.test(b))return "US";
+  if(/en[- _]?(uk|gb)|british|united kingdom|england|scotland|wales/.test(b))return "UK";
+  return ""
+}
+function exactWordMatchesTitle(raw,title=""){
+  const norm=String(raw).toLowerCase().replace(/[^a-z]/g,"");
+  if(!norm)return false;
+  const stripped=String(title).replace(/^File:/i,"").replace(/\.(ogg|oga|wav|mp3|flac)$/i,"").toLowerCase().replace(/^en[- _]?(us|uk|gb|za)[- _]?/,"").replace(/[- _]?\d+$/,"").replace(/[^a-z]/g,"");
+  return stripped===norm
+}
+function commonsPageToAudioItem(p,raw){
+  const info=p?.videoinfo?.[0];if(!info)return null;
+  const playable=bestCommonsPlayable(info);if(!playable?.url)return null;
+  const meta=info.extmetadata||{};
+  const blob=`${p.title||""} ${stripHtml(meta.ImageDescription?.value||"")} ${stripHtml(meta.Description?.value||"")} ${stripHtml(meta.Categories?.value||"")}`.toLowerCase();
+  if(/synthetic|text-to-speech|\btts\b|speech synthes|generated voice|computer voice/.test(blob))return null;
+  const norm=String(raw).toLowerCase().replace(/[^a-z]/g,"");
+  const desc=`${stripHtml(meta.ImageDescription?.value||"")} ${stripHtml(meta.Description?.value||"")}`.toLowerCase();
+  const exactTitle=exactWordMatchesTitle(raw,p.title||"");
+  const exactDescription=norm&&new RegExp(`(^|[^a-z])${norm}([^a-z]|$)`,"i").test(desc);
+  if(!exactTitle&&!exactDescription)return null;
+  const artistRaw=meta.AttributionName?.value||meta.Artist?.value||meta.Credit?.value||"";
+  const label=cleanSpeakerName(artistRaw);if(!label)return null;
+  const group=commonsGroupFromBlob(blob);if(!group)return null;
+  const rule=curatedSpeakerRule(artistRaw);
+  const license=stripHtml(meta.LicenseShortName?.value||meta.UsageTerms?.value||"");
+  if(!license||/all rights reserved|no license/i.test(license))return null;
+  const isShtooka=/shtooka/i.test(blob);
+  return {
+    url:playable.url,sources:playable.sources,label,
+    accent:group==="US"?"American":group==="UK"?"British":"South African",
+    group,style:rule?.style||"academic",voiceRole:rule?.role||null,
+    qualityTag:rule?.quality||(isShtooka?"Shtooka learning recording":"Verified human pronunciation"),
+    license,source:rule?.source||(isShtooka?"Shtooka / Wikimedia Commons":"Wikimedia Commons"),
+    attributionUrl:`https://commons.wikimedia.org/wiki/${encodeURIComponent(String(p.title||"").replace(/ /g,"_"))}`,
+    mime:playable.mime,bitrate:playable.bitrate,text:raw,
+    speakerId:rule?.id||label.toLowerCase().replace(/[^a-z0-9]+/g,"-")
+  }
+}
+async function fetchExactCommonsAudio(raw){
+  const safe=String(raw||"").trim();
+  if(!safe||safe.length>60)return [];
+  const titles=[
+    `File:En-uk-${safe}.ogg`,`File:En-uk-${safe}-1.ogg`,`File:En-uk-${safe}-2.ogg`,
+    `File:En-gb-${safe}.ogg`,
+    `File:En-us-${safe}.ogg`,`File:En-us-${safe}-1.ogg`,`File:En-us-${safe}-2.ogg`,
+    `File:En-za-${safe}.ogg`
+  ];
+  try{
+    const url=`https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent(titles.join("|"))}&prop=videoinfo&viprop=url%7Cderivatives%7Cextmetadata&format=json&origin=*`;
+    const r=await fetch(url,{mode:"cors",cache:"no-store"});if(!r.ok)return [];
+    const j=await r.json();
+    return Object.values(j.query?.pages||{}).map(p=>commonsPageToAudioItem(p,safe)).filter(Boolean)
+  }catch{return []}
 }
 async function fetchCommonsAudio(word){
-  const raw=String(word||"").trim();
-  if(!raw)return [];
+  const raw=String(word||"").trim();if(!raw)return [];
   const cached=typeof voiceLibraryCacheGet==="function"?voiceLibraryCacheGet(raw):null;
   if(cached?.length)return sortHumanAudio(cached);
 
+  const found=[];const seen=new Set();
+  const direct=await fetchExactCommonsAudio(raw);
+  for(const item of direct){
+    if(item?.url&&!seen.has(item.url)){seen.add(item.url);found.push(item)}
+  }
+
   const speakerConfig=(typeof VOICE_LIBRARY!=="undefined"?VOICE_LIBRARY.speakers:[])||[];
   const prefixes=[...new Set(speakerConfig.flatMap(s=>s.searchPrefixes||[]))];
-  const queries=[
-    ...prefixes.map(p=>`intitle:${p}${raw}`),
-    ...prefixes.map(p=>`intitle:${p}${raw}-`),
-    `English pronunciation "${raw}"`
-  ];
-  const found=[];const seen=new Set();
+  const queries=[...prefixes.map(p=>`intitle:${p}${raw}`),...prefixes.map(p=>`intitle:${p}${raw}-`),`English pronunciation "${raw}"`];
 
   for(const q of queries){
+    if(found.length>=12)break;
     try{
-      const url=`https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(q)}&gsrnamespace=6&gsrlimit=25&prop=videoinfo&viprop=url%7Cderivatives%7Cextmetadata&format=json&origin=*`;
-      const r=await fetch(url,{mode:"cors"});if(!r.ok)continue;
-      const j=await r.json();const pages=Object.values(j.query?.pages||{});
-      for(const p of pages){
-        const info=p.videoinfo?.[0];if(!info)continue;
-        const playable=bestCommonsPlayable(info);
-        if(!playable?.url||seen.has(playable.url))continue;
-        const meta=info.extmetadata||{};
-        const blob=`${p.title} ${stripHtml(meta.ImageDescription?.value||"")} ${stripHtml(meta.Description?.value||"")} ${stripHtml(meta.Categories?.value||"")}`.toLowerCase();
-        if(/synthetic|text-to-speech|\btts\b|speech synthes|generated voice|computer voice/.test(blob))continue;
-
-        const norm=raw.toLowerCase().replace(/[^a-z]/g,"");
-        const rawTitle=p.title.replace(/^File:/i,"").replace(/\.(ogg|oga|wav|mp3|flac)$/i,"").toLowerCase();
-        const strippedTitle=rawTitle
-          .replace(/^en[- _]?(us|uk|gb|za)[- _]?/,"")
-          .replace(/[- _]?\d+$/,"")
-          .replace(/[^a-z]/g,"");
-        const exactTitle=strippedTitle===norm;
-        const desc=`${stripHtml(meta.ImageDescription?.value||"")} ${stripHtml(meta.Description?.value||"")}`.toLowerCase();
-        const exactDescription=norm&&new RegExp(`(^|[^a-z])${norm}([^a-z]|$)`,"i").test(desc);
-        if(!exactTitle&&!exactDescription)continue;
-
-        const artistRaw=meta.AttributionName?.value||meta.Artist?.value||meta.Credit?.value||"";
-        const rule=curatedSpeakerRule(artistRaw);
-        if(!rule)continue;
-        const label=cleanSpeakerName(artistRaw);
-        if(!label)continue;
-
-        // Filename/metadata must agree with the curated speaker's accent group.
-        const detected=/en[- _]?za|south africa|south african/.test(blob)?"ZA":
-          /en[- _]?(us)|american|united states/.test(blob)?"US":
-          /en[- _]?(uk|gb)|british|united kingdom|england|scotland|wales/.test(blob)?"UK":"";
-        if(detected&&detected!==rule.group)continue;
-
-        const license=stripHtml(meta.LicenseShortName?.value||meta.UsageTerms?.value||"");
-        if(!license||/all rights reserved|no license/i.test(license))continue;
-
-        seen.add(playable.url);
-        found.push({
-          url:playable.url,
-          label,
-          accent:rule.group==="US"?"American":rule.group==="UK"?"British":"South African",
-          group:rule.group,
-          style:rule.style,
-          voiceRole:rule.role,
-          qualityTag:rule.quality,
-          license,
-          source:rule.source||"Wikimedia Commons",
-          attributionUrl:`https://commons.wikimedia.org/wiki/${encodeURIComponent(p.title.replace(/ /g,"_"))}`,
-          mime:playable.mime,
-          bitrate:playable.bitrate,
-          text:raw,
-          speakerId:rule.id
-        })
+      const url=`https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(q)}&gsrnamespace=6&gsrlimit=16&prop=videoinfo&viprop=url%7Cderivatives%7Cextmetadata&format=json&origin=*`;
+      const r=await fetch(url,{mode:"cors",cache:"no-store"});if(!r.ok)continue;
+      const j=await r.json();
+      for(const p of Object.values(j.query?.pages||{})){
+        const item=commonsPageToAudioItem(p,raw);
+        if(!item?.url||seen.has(item.url))continue;
+        seen.add(item.url);found.push(item)
       }
     }catch{}
   }
-  const result=sortHumanAudio(dedupeAudio(found)).slice(0,28);
+  const result=sortHumanAudio(dedupeAudio(found)).slice(0,20);
   if(result.length&&typeof voiceLibraryCacheSet==="function")voiceLibraryCacheSet(raw,result);
   return result
 }
@@ -341,10 +353,9 @@ async function warmVoiceLibrary(words=[]){
   for(const word of unique){
     try{
       const items=await fetchCommonsAudio(word);
-      const first=items[0];
-      if(first?.url&&typeof voiceLibraryCacheAudio==="function")voiceLibraryCacheAudio(first.url)
+      if(items[0]?.url&&typeof voiceLibraryCacheAudio==="function")voiceLibraryCacheAudio(items[0].url)
     }catch{}
-    await new Promise(r=>setTimeout(r,180))
+    await new Promise(r=>setTimeout(r,120))
   }
 }
 function dedupeAudio(items){
