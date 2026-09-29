@@ -499,31 +499,54 @@ function playRepeated(url,context="lesson",item=null){
   const repeatForever=rawRepeat==="loop";
   const repeat=repeatForever?Infinity:Math.max(1,+rawRepeat||1);
   const speed=+(document.getElementById(speedId)?.value||1);
-  lastPlayedByContext[context]={url,item};
-  if(typeof voiceLibraryCacheAudio==="function")voiceLibraryCacheAudio(url);
+
+  const sources=[...new Set([url,...(item?.sources||[])].filter(Boolean))];
+  lastPlayedByContext[context]={url:sources[0],item:{...(item||{}),sources}};
   let count=0;
-  const a=new Audio();
-  activeAudio=a;
-  a.preload="auto";
-  a.src=url;
-  a.playbackRate=speed;
-  a.onloadedmetadata=()=>{a.playbackRate=speed};
-  a.onended=()=>{
-    count++;
-    if(repeatForever||count<repeat){
-      try{a.currentTime=0}catch{}
-      a.playbackRate=speed;
-      const p=a.play();
-      if(p&&typeof p.catch==="function")p.catch(()=>toast(state.settings.lang==="ar"?"تعذر تكرار التسجيل. اضغط تشغيل مرة أخرى.":"Repeat was blocked. Tap play again."))
+  let stopped=false;
+
+  const startSource=(idx)=>{
+    if(stopped)return;
+    if(idx>=sources.length){
+      toast(state.settings.lang==="ar"?"تعذر تشغيل التسجيل. جرّب متحدثًا آخر.":"This recording could not be played. Try another speaker.");
+      return
+    }
+    const a=new Audio();
+    activeAudio=a;
+    a.preload="auto";
+    a.playsInline=true;
+    a.src=sources[idx];
+    a.playbackRate=speed;
+
+    a.onloadedmetadata=()=>{a.playbackRate=speed};
+    a.onerror=()=>{
+      if(activeAudio===a){
+        try{a.pause()}catch{}
+        startSource(idx+1)
+      }
+    };
+    a.onended=()=>{
+      count++;
+      if(repeatForever||count<repeat){
+        try{a.currentTime=0}catch{}
+        a.playbackRate=speed;
+        const p=a.play();
+        if(p&&typeof p.catch==="function")p.catch(()=>startSource(idx+1))
+      }
+    };
+
+    const attempt=a.play();
+    if(attempt&&typeof attempt.then==="function"){
+      attempt.then(()=>{
+        if(typeof voiceLibraryCacheAudio==="function")voiceLibraryCacheAudio(sources[idx]);
+      }).catch(()=>startSource(idx+1))
     }
   };
-  a.onerror=()=>toast(state.settings.lang==="ar"?"تعذر تشغيل هذا التسجيل. جرّب متحدثًا آخر.":"This recording could not be played. Try another speaker.");
-  const attempt=a.play();
-  if(attempt&&typeof attempt.catch==="function"){
-    attempt.catch(()=>toast(state.settings.lang==="ar"?"اضغط تشغيل مرة أخرى. المتصفح منع التشغيل الأول.":"Tap play again. The browser blocked the first playback."))
-  }
+
+  startSource(0);
   if(context==="lesson"){adjustSkill("listening",.3);state.attempts.listening++;saveState()}
 }
+
 function renderLessonTranscript(){
   const el=document.getElementById("lessonTranscript");
   if(!el||!currentUnit)return;
