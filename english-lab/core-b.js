@@ -326,7 +326,7 @@ async function fetchWiktionaryAudio(raw){
   const safe=String(raw||"").trim();
   if(!safe||safe.includes(" ")||safe.length>50)return [];
   try{
-    const api=\`https://en.wiktionary.org/w/api.php?action=parse&page=\${encodeURIComponent(safe)}&prop=text&format=json&origin=*\`;
+    const api=`https://en.wiktionary.org/w/api.php?action=parse&page=${encodeURIComponent(safe)}&prop=text&format=json&origin=*`;
     const r=await fetch(api,{mode:"cors",cache:"no-store"});
     if(!r.ok)return [];
     const j=await r.json();
@@ -353,7 +353,7 @@ async function fetchWiktionaryAudio(raw){
     }
     if(!refs.length)return [];
 
-    const url=\`https://commons.wikimedia.org/w/api.php?action=query&titles=\${encodeURIComponent(refs.map(x=>x.title).join("|"))}&prop=videoinfo&viprop=url%7Cderivatives%7Cextmetadata&format=json&origin=*\`;
+    const url=`https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent(refs.map(x=>x.title).join("|"))}&prop=videoinfo&viprop=url%7Cderivatives%7Cextmetadata&format=json&origin=*`;
     const cr=await fetch(url,{mode:"cors",cache:"no-store"});
     if(!cr.ok)return [];
     const cj=await cr.json();
