@@ -1,5 +1,5 @@
 const VOICE_LIBRARY = {
-  version: 3,
+  version: 4,
   speakers: [
     {
       id: "us-street-dvortygirl",
@@ -79,7 +79,7 @@ const VOICE_LIBRARY = {
       source: "Wikimedia Commons"
     }
   ],
-  cacheKey: "englishLabHumanVoiceLibraryV3"
+  cacheKey: "englishLabHumanVoiceLibraryV4"
 };
 
 function voiceLibrarySpeakerForArtist(raw=""){
@@ -111,7 +111,7 @@ function voiceLibraryCacheSet(word,items){
 async function voiceLibraryCacheAudio(url){
   if(!("caches" in window)||!url)return;
   try{
-    const cache=await caches.open("english-human-audio-v3");
+    const cache=await caches.open("english-human-audio-v4");
     const hit=await cache.match(url);
     if(hit)return;
     const r=await fetch(url,{mode:"cors"});
